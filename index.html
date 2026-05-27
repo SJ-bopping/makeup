@@ -824,7 +824,7 @@ function om(id){g(id).style.display='flex';}
 function cm(id){g(id).style.display='none';}
 
 function setSyncDot(s){const d=g('sync-dot');if(!d)return;d.className='sdot'+(s==='syncing'?' sy':s==='error'?' er':'');}
-function getPhotos(col,id){try{return JSON.parse(localStorage.getItem('mph_'+col+'_'+id)||'[]');}catch{return[];}}
+function getPhotos(col,id){const arr=col==='items'?items:col==='looks'?looks:[];const obj=arr.find(x=>x.id===id);return obj?.photos||[];}
 
 function updateBadges(){
   const s=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
@@ -963,7 +963,7 @@ function openAddItem(id=null){
   if(item?.stock)g('f-stock').value=item.stock||'Full';
   if(item?.rating)g('f-rating').value=item.rating||'';
   g('f-fav').checked=!!(item?.favourite);
-  piPhotos=[];g('f-photo').value='';g('fpp').innerHTML='';
+  piPhotos=[...(getPhotos('items',eItemId||''))];g('f-photo').value='';renderIPP();
   bCP(item?.color||null);om('item-modal');
 }
 
@@ -992,7 +992,7 @@ function bCP(sel){
 function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
-async function prevIP(inp){const files=Array.from(inp.files);for(const f of files){piPhotos.push(await f2b(f));}inp.value='';renderIPP();}
+async function prevIP(inp){const files=Array.from(inp.files);if(!files.length)return;inp.value='';const urls=await uploadPhotos(files);piPhotos.push(...urls);renderIPP();}
 function renderIPP(){const el=g('fpp');if(!piPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${piPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="piPhotos.splice(${i},1);renderIPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
 
 function saveItem(){
@@ -1000,7 +1000,7 @@ function saveItem(){
   const orig=eItemId?items.find(i=>i.id===eItemId):null;
   const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photos:[...piPhotos],photo:piPhotos[0]||null,addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
-  if(item.photos.length)localStorage.setItem('mph_items_'+item.id,JSON.stringify(item.photos));
+  
   const wasEditing=eItemId;cm('item-modal');updateBadges();renderCurrent();
   showToast(wasEditing?'Product updated ✓':'Product added ✓');
   persist('items',item);
@@ -1008,7 +1008,7 @@ function saveItem(){
 
 function delItem(){
   const id=vItemId||eItemId;if(!id||!confirm('Delete this product?'))return;
-  items=items.filter(i=>i.id!==id);localStorage.removeItem('mph_items_'+id);
+  items=items.filter(i=>i.id!==id);
   cm('detail-modal');cm('item-modal');vItemId=null;eItemId=null;
   updateBadges();renderCurrent();showToast('Deleted');persistDel('items',id);
 }
@@ -1036,7 +1036,7 @@ function rLooks(){
 
 function openAddLook(){eLookId=null;selLookItems=new Set();plPhotos=[];g('lmt').textContent='Add look';g('ldel').style.display='none';['lf-name','lf-notes'].forEach(id=>g(id).value='');g('lf-date').value=new Date().toISOString().split('T')[0];g('lf-occ').value='';g('lf-photo').value='';g('lpp').innerHTML='';buildLookPicker();om('look-modal');}
 function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';const ph=getPhotos('looks',id);g('lpp').innerHTML=ph.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${ph.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px">`).join('')}</div>`:'';buildLookPicker();om('look-modal');}
-async function prevLP(inp){const files=Array.from(inp.files);for(const f of files){plPhotos.push(await f2b(f));}inp.value='';renderLPP();}
+async function prevLP(inp){const files=Array.from(inp.files);if(!files.length)return;inp.value='';const urls=await uploadPhotos(files);plPhotos.push(...urls);renderLPP();}
 function renderLPP(){const el=g('lpp');if(!plPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${plPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="plPhotos.splice(${i},1);renderLPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
 function buildLookPicker(){const el=g('lpick');if(!items.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add products first.</span>';return;}el.innerHTML=[...items].sort((a,b)=>a.name.localeCompare(b.name)).map(item=>`<span class="chip ${selLookItems.has(item.id)?'on':''}" onclick="togLI('${item.id}',this)">${(cats.find(c=>c.id===item.category)||{icon:''}).icon||''} ${item.name}</span>`).join('');}
 function togLI(id,el){if(selLookItems.has(id)){selLookItems.delete(id);el.classList.remove('on');}else{selLookItems.add(id);el.classList.add('on');}}
@@ -1046,11 +1046,11 @@ function saveLook(){
   const isNew=!eLookId;
   const look={id:eLookId||mid(),name,items:[...selLookItems],date:gv('lf-date'),occasion:gv('lf-occ'),notes:gv('lf-notes').trim(),photos:[...plPhotos],photo:plPhotos[0]||null,createdAt:eLookId?(looks.find(l=>l.id===eLookId)||{}).createdAt||Date.now():Date.now(),updatedAt:Date.now()};
   if(eLookId)looks=looks.map(l=>l.id===eLookId?look:l);else looks.push(look);
-  if(look.photos.length)localStorage.setItem('mph_looks_'+look.id,JSON.stringify(look.photos));
+  
   cm('look-modal');updateBadges();renderCurrent();
   showToast(isNew?'Look saved ✓':'Look updated ✓');persist('looks',look);
 }
-function delLook(){if(!eLookId||!confirm('Delete this look?'))return;const id=eLookId;looks=looks.filter(l=>l.id!==id);localStorage.removeItem('mph_looks_'+id);cm('look-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('looks',id);}
+function delLook(){if(!eLookId||!confirm('Delete this look?'))return;const id=eLookId;looks=looks.filter(l=>l.id!==id);cm('look-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('looks',id);}
 
 // ── WISHLIST ──────────────────────────────────────────────────────────────────
 function rWishlist(){
