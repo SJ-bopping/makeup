@@ -1279,7 +1279,7 @@ function showToast(msg){const el=g('toast');el.textContent=msg;el.classList.add(
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ov').forEach(o=>o.style.display='none');closeMore();}});
 
 // ── CLOUDINARY PHOTO UPLOAD ──────────────────────────────────────────────────
-const CL_CLOUD='dirakuvhp',CL_PRESET='wardrobe',CL_URL='https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/image/upload';
+const CL_CLOUD='dirakuvhp',CL_PRESET='makeup',CL_URL='https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/image/upload';
 
 async function uploadPhoto(file){
   const blob=await new Promise((res,rej)=>{
