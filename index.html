@@ -4,10 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Makeup</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,doc,collection,setDoc,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ══════════════════════════════════════════
+// 🔧 YOUR FIREBASE CONFIG — paste yours here
+// ══════════════════════════════════════════
 const firebaseConfig={
   apiKey:"AIzaSyBHpwQJUxvwMTwXvrwAFyuGydOM7EqCBhw",
   authDomain:"wardrobe-sjw.firebaseapp.com",
@@ -16,72 +20,71 @@ const firebaseConfig={
   messagingSenderId:"2487840884",
   appId:"1:2487840884:web:29f2bf8177a558736de121"
 };
-firebase.initializeApp(firebaseConfig);
-const _auth=firebase.auth();
-const _db=firebase.firestore();
+// ══════════════════════════════════════════
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
 let _uid=null,_unsubs=[];
 
-window._fbSignOut=()=>_auth.signOut();
+window._fbSignOut=()=>signOut(auth);
 window.handleLogin=async()=>{
-  const e=document.getElementById('auth-email').value.trim(),p=document.getElementById('auth-pass').value,err=document.getElementById('auth-err');
+  const e=g('auth-email').value.trim(),p=g('auth-pass').value,err=g('auth-err');
   err.textContent='';
-  try{await _auth.signInWithEmailAndPassword(e,p);}
-  catch(ex){err.textContent=_fe(ex.code);}
+  try{await signInWithEmailAndPassword(auth,e,p);}
+  catch(ex){err.textContent=fe(ex.code);}
 };
 window.handleSignup=async()=>{
-  const e=document.getElementById('auth-email').value.trim(),p=document.getElementById('auth-pass').value,err=document.getElementById('auth-err');
+  const e=g('auth-email').value.trim(),p=g('auth-pass').value,err=g('auth-err');
   err.textContent='';
   if(p.length<6){err.textContent='Password must be 6+ characters.';return;}
-  try{await _auth.createUserWithEmailAndPassword(e,p);}
-  catch(ex){err.textContent=_fe(ex.code);}
+  try{await createUserWithEmailAndPassword(auth,e,p);}
+  catch(ex){err.textContent=fe(ex.code);}
 };
-function _fe(c){return({'auth/invalid-email':'Invalid email.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/email-already-in-use':'Email already in use — try logging in.','auth/invalid-credential':'Email or password incorrect.'})[c]||'Something went wrong.';}
+function fe(c){return({'auth/invalid-email':'Invalid email.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/email-already-in-use':'Email already in use — try logging in.','auth/invalid-credential':'Email or password incorrect.'})[c]||'Something went wrong.';}
+function g(id){return document.getElementById(id);}
 
-_auth.onAuthStateChanged(user=>{
+onAuthStateChanged(auth,user=>{
   if(user){
     _uid=user.uid;
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app-root').style.display='flex';
-    document.getElementById('user-email-display').textContent=user.email;
-    _startListeners();
+    g('auth-screen').style.display='none';
+    g('app-root').style.display='flex';
+    g('user-email-display').textContent=user.email;
+    startListeners();
   }else{
     _uid=null;_unsubs.forEach(u=>u());_unsubs=[];
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('app-root').style.display='none';
+    g('auth-screen').style.display='flex';
+    g('app-root').style.display='none';
   }
-},err=>{
-  console.error('Auth error',err);
 });
 
-function _startListeners(){
+function startListeners(){
   _unsubs.forEach(u=>u());_unsubs=[];
   let loaded={items:false,looks:false,wishlist:false,cats:false};
-  // Safety net: force render after 4s regardless
-  const safetyTimer=setTimeout(()=>{updateBadges();renderCurrent();},4000);
   function checkLoad(){
-    if(Object.values(loaded).every(Boolean)){
-      clearTimeout(safetyTimer);
-      updateBadges();renderCurrent();
-    }
+    if(!Object.values(loaded).every(Boolean))return;
+    // Poll until the plain script has defined updateBadges (max 3s)
+    let tries=0;
+    const run=()=>{
+      if(window.updateBadges){window.updateBadges();window.renderCurrent();}
+      else if(tries++<30){setTimeout(run,100);}
+    };
+    run();
   }
-  const sub=(col,setter,key)=>_db.collection('users/'+_uid+'/makeup_'+col).onSnapshot(snap=>{
+  const sub=(col,setter,key)=>onSnapshot(collection(db,'users',_uid,'makeup_'+col),snap=>{
     setter(snap.docs.map(d=>d.data()));
     if(!loaded[key]){loaded[key]=true;checkLoad();}
-    else{updateBadges();}
-  },err=>{
-    // On error, mark as loaded so we don't hang forever
-    console.error('Firestore error on',col,err);
-    if(!loaded[key]){loaded[key]=true;checkLoad();}
+    else if(window.updateBadges)window.updateBadges();
   });
-  _unsubs.push(sub('items',d=>{items=d;},'items'));
-  _unsubs.push(sub('looks',d=>{looks=d;},'looks'));
-  _unsubs.push(sub('wishlist',d=>{wishlist=d;},'wishlist'));
-  _unsubs.push(sub('cats',d=>{cats=d;if(!cats.length)setTimeout(_seedCats,100);},'cats'));
+  _unsubs.push(sub('items',d=>{window._items=d;items=d;},'items'));
+  _unsubs.push(sub('looks',d=>{window._looks=d;looks=d;},'looks'));
+  _unsubs.push(sub('wishlist',d=>{window._wishlist=d;wishlist=d;},'wishlist'));
+  _unsubs.push(sub('cats',d=>{window._cats=d;cats=d;if(!cats.length)seedCats();},'cats'));
 }
 
-async function _seedCats(){
-  const b=_db.batch();
-  DEFAULT_CATS.forEach(c=>b.set(_db.doc('users/'+_uid+'/makeup_cats/'+c.id),c));
+async function seedCats(){
+  const b=writeBatch(db);
+  DEFAULT_CATS.forEach(c=>b.set(doc(db,'users',_uid,'makeup_cats',c.id),c));
   await b.commit();
 }
 
@@ -93,11 +96,11 @@ window.fbSave=async(col,item)=>{
     else if(item.photo)localStorage.setItem('mph_'+col+'_'+item.id,JSON.stringify([item.photo]));
     cleaned.hasPhoto=!!(item.photos?.length||item.photo);
     cleaned.photoCount=item.photos?.length||(item.photo?1:0);
-    await _db.collection('users/'+_uid+'/makeup_'+col).doc(item.id).set(cleaned);
+    await setDoc(doc(db,'users',_uid,'makeup_'+col,item.id),cleaned);
     setSyncDot('ok');
   }catch(e){setSyncDot('error');console.error(e);}
 };
-window.fbDel=async(col,id)=>{if(!_uid)return;try{await _db.collection('users/'+_uid+'/makeup_'+col).doc(id).delete();}catch(e){console.error(e);}};
+window.fbDel=async(col,id)=>{if(!_uid)return;try{await deleteDoc(doc(db,'users',_uid,'makeup_'+col,id));}catch(e){console.error(e);}};
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
@@ -457,57 +460,34 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
               <option>Lip stain</option>
             </optgroup>
             <optgroup label="— Cleanse —">
-              <option>Cleanser</option><option>Gel cleanser</option><option>Foam cleanser</option><option>Cream cleanser</option>
-              <option>Oil cleanser</option><option>Balm cleanser</option><option>Micellar water</option><option>Cleansing water</option>
-              <option>Cleansing milk</option><option>Double cleanse oil</option><option>Cleansing bar</option>
-              <option>Makeup remover</option><option>Eye makeup remover</option><option>Cleansing wipes</option>
+              <option>Cleanser</option><option>Gel cleanser</option><option>Foam cleanser</option><option>Cream cleanser</option><option>Oil cleanser</option><option>Balm cleanser</option><option>Micellar water</option><option>Cleansing water</option><option>Cleansing milk</option><option>Double cleanse oil</option><option>Makeup remover</option><option>Eye makeup remover</option><option>Cleansing wipes</option>
             </optgroup>
             <optgroup label="— Tone & Prep —">
-              <option>Toner</option><option>Hydrating toner</option><option>Exfoliating toner</option><option>Astringent toner</option>
-              <option>Essence</option><option>Facial mist</option><option>Thermal water spray</option><option>Setting mist</option>
+              <option>Toner</option><option>Hydrating toner</option><option>Exfoliating toner</option><option>Astringent toner</option><option>Essence</option><option>Facial mist</option><option>Thermal water spray</option>
             </optgroup>
             <optgroup label="— Treat —">
-              <option>Serum</option><option>Vitamin C serum</option><option>Retinol</option><option>Retinoid</option>
-              <option>Tretinoin</option><option>Bakuchiol</option><option>Niacinamide</option><option>Hyaluronic acid</option>
-              <option>Peptide serum</option><option>AHA serum</option><option>BHA serum</option><option>PHA serum</option>
-              <option>Azelaic acid</option><option>Salicylic acid</option><option>Glycolic acid</option><option>Lactic acid</option>
-              <option>Tranexamic acid</option><option>Alpha arbutin</option><option>Kojic acid</option>
-              <option>Ceramide serum</option><option>Centella serum</option><option>Snail mucin</option>
-              <option>Collagen serum</option><option>Brightening serum</option><option>Anti-aging serum</option>
-              <option>Dark spot serum</option><option>Ampoule</option><option>Booster</option><option>Facial oil treatment</option>
+              <option>Serum</option><option>Vitamin C serum</option><option>Retinol</option><option>Retinoid</option><option>Tretinoin</option><option>Bakuchiol</option><option>Niacinamide</option><option>Hyaluronic acid</option><option>Peptide serum</option><option>AHA serum</option><option>BHA serum</option><option>PHA serum</option><option>Azelaic acid</option><option>Salicylic acid</option><option>Glycolic acid</option><option>Lactic acid</option><option>Tranexamic acid</option><option>Alpha arbutin</option><option>Ceramide serum</option><option>Centella serum</option><option>Snail mucin</option><option>Brightening serum</option><option>Anti-aging serum</option><option>Dark spot serum</option><option>Ampoule</option><option>Booster</option><option>Facial oil treatment</option>
             </optgroup>
             <optgroup label="— Moisturise —">
-              <option>Moisturiser</option><option>Gel moisturiser</option><option>Cream moisturiser</option><option>Lotion</option>
-              <option>Rich cream</option><option>Barrier cream</option><option>Water cream</option><option>Gel-cream</option>
-              <option>Night cream</option><option>Sleeping mask</option><option>Face oil</option><option>Facial balm</option>
+              <option>Moisturiser</option><option>Gel moisturiser</option><option>Cream moisturiser</option><option>Lotion</option><option>Rich cream</option><option>Barrier cream</option><option>Water cream</option><option>Gel-cream</option><option>Night cream</option><option>Sleeping mask</option><option>Face oil</option><option>Facial balm</option>
             </optgroup>
             <optgroup label="— Eyes & Lips —">
-              <option>Eye cream</option><option>Eye gel</option><option>Eye serum</option><option>Eye oil</option>
-              <option>Under-eye patches</option><option>Lip treatment</option><option>Lip serum</option>
-              <option>Lip mask</option><option>Lip scrub</option><option>Lip balm SPF</option>
+              <option>Eye cream</option><option>Eye gel</option><option>Eye serum</option><option>Eye oil</option><option>Under-eye patches</option><option>Lip treatment</option><option>Lip serum</option><option>Lip mask</option><option>Lip scrub</option><option>Lip balm SPF</option>
             </optgroup>
             <optgroup label="— Exfoliate —">
-              <option>Exfoliator</option><option>Physical scrub</option><option>Chemical exfoliant</option>
-              <option>Enzyme exfoliant</option><option>Peeling gel</option><option>Peeling solution</option><option>Gommage</option>
+              <option>Exfoliator</option><option>Physical scrub</option><option>Chemical exfoliant</option><option>Enzyme exfoliant</option><option>Peeling gel</option><option>Peeling solution</option><option>Gommage</option>
             </optgroup>
             <optgroup label="— Masks —">
-              <option>Face mask</option><option>Sheet mask</option><option>Clay mask</option><option>Mud mask</option>
-              <option>Peel-off mask</option><option>Overnight mask</option><option>Hydrating mask</option>
-              <option>Brightening mask</option><option>Charcoal mask</option><option>Eye mask</option><option>Neck mask</option>
+              <option>Face mask</option><option>Sheet mask</option><option>Clay mask</option><option>Mud mask</option><option>Peel-off mask</option><option>Overnight mask</option><option>Hydrating mask</option><option>Brightening mask</option><option>Charcoal mask</option><option>Eye mask</option><option>Neck mask</option>
             </optgroup>
             <optgroup label="— SPF & Sun —">
-              <option>SPF / Sunscreen</option><option>SPF moisturiser</option><option>SPF serum</option>
-              <option>Mineral sunscreen</option><option>Chemical sunscreen</option><option>Hybrid sunscreen</option>
-              <option>Tinted SPF</option><option>SPF mist</option><option>After-sun</option>
+              <option>SPF / Sunscreen</option><option>SPF moisturiser</option><option>SPF serum</option><option>Mineral sunscreen</option><option>Chemical sunscreen</option><option>Hybrid sunscreen</option><option>Tinted SPF</option><option>SPF mist</option><option>After-sun</option>
             </optgroup>
             <optgroup label="— Targeted —">
-              <option>Spot treatment</option><option>Pimple patch</option><option>Acne treatment</option>
-              <option>Hyperpigmentation treatment</option><option>Scar treatment</option><option>Rosacea treatment</option>
-              <option>Neck cream</option><option>Hand cream</option><option>Cuticle treatment</option>
+              <option>Spot treatment</option><option>Pimple patch</option><option>Acne treatment</option><option>Hyperpigmentation treatment</option><option>Scar treatment</option><option>Rosacea treatment</option><option>Neck cream</option><option>Hand cream</option><option>Cuticle treatment</option>
             </optgroup>
             <optgroup label="— Supplements —">
-              <option>Collagen supplement</option><option>Skin supplement</option><option>Vitamin</option>
-              <option>Probiotic</option><option>Gummy supplement</option>
+              <option>Collagen supplement</option><option>Skin supplement</option><option>Vitamin</option><option>Probiotic</option><option>Gummy supplement</option>
             </optgroup>
             <optgroup label="— Body —">
               <option>Body lotion</option><option>Body oil</option><option>Body scrub</option><option>Body SPF</option>
@@ -853,8 +833,8 @@ const COLORS=[
   {n:'Peacock',h:'linear-gradient(135deg,#004D40,#006064,#1565C0,#4A148C)'},{n:'Lava',h:'linear-gradient(135deg,#FF4500,#FF8C00,#FFD700,#DC143C)'},
 ];
 
-const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Cream cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing water','Cleansing milk','Double cleanse oil','Cleansing bar','Makeup remover','Eye makeup remover','Cleansing wipes','Toner','Hydrating toner','Exfoliating toner','Astringent toner','Essence','Facial mist','Thermal water spray','Setting mist','Serum','Vitamin C serum','Retinol','Retinoid','Tretinoin','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','PHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Tranexamic acid','Alpha arbutin','Kojic acid','Ceramide serum','Centella serum','Snail mucin','Collagen serum','Brightening serum','Anti-aging serum','Dark spot serum','Ampoule','Booster','Facial oil treatment','Moisturiser','Gel moisturiser','Cream moisturiser','Lotion','Rich cream','Barrier cream','Water cream','Gel-cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Eye oil','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Lip balm SPF','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Peeling solution','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Peel-off mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','Eye mask','Neck mask','SPF / Sunscreen','SPF moisturiser','SPF serum','Mineral sunscreen','Chemical sunscreen','Hybrid sunscreen','Tinted SPF','SPF mist','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Scar treatment','Rosacea treatment','Neck cream','Hand cream','Cuticle treatment','Collagen supplement','Skin supplement','Vitamin','Probiotic','Gummy supplement'];
-const SKINCARE_STEP_MAP={'Cleanser':'Cleanse','Gel cleanser':'Cleanse','Foam cleanser':'Cleanse','Cream cleanser':'Cleanse','Oil cleanser':'Cleanse','Balm cleanser':'Cleanse','Micellar water':'Cleanse','Cleansing water':'Cleanse','Cleansing milk':'Cleanse','Double cleanse oil':'Cleanse','Cleansing bar':'Cleanse','Makeup remover':'Cleanse','Eye makeup remover':'Cleanse','Cleansing wipes':'Cleanse','Toner':'Tone & Prep','Hydrating toner':'Tone & Prep','Exfoliating toner':'Tone & Prep','Astringent toner':'Tone & Prep','Essence':'Tone & Prep','Facial mist':'Tone & Prep','Thermal water spray':'Tone & Prep','Setting mist':'Tone & Prep','Serum':'Treat','Vitamin C serum':'Treat','Retinol':'Treat','Retinoid':'Treat','Tretinoin':'Treat','Bakuchiol':'Treat','Niacinamide':'Treat','Hyaluronic acid':'Treat','Peptide serum':'Treat','AHA serum':'Treat','BHA serum':'Treat','PHA serum':'Treat','Azelaic acid':'Treat','Salicylic acid':'Treat','Glycolic acid':'Treat','Lactic acid':'Treat','Tranexamic acid':'Treat','Alpha arbutin':'Treat','Kojic acid':'Treat','Ceramide serum':'Treat','Centella serum':'Treat','Snail mucin':'Treat','Collagen serum':'Treat','Brightening serum':'Treat','Anti-aging serum':'Treat','Dark spot serum':'Treat','Ampoule':'Treat','Booster':'Treat','Facial oil treatment':'Treat','Moisturiser':'Moisturise','Gel moisturiser':'Moisturise','Cream moisturiser':'Moisturise','Lotion':'Moisturise','Rich cream':'Moisturise','Barrier cream':'Moisturise','Water cream':'Moisturise','Gel-cream':'Moisturise','Night cream':'Moisturise','Sleeping mask':'Moisturise','Face oil':'Moisturise','Facial balm':'Moisturise','Eye cream':'Eyes & Lips','Eye gel':'Eyes & Lips','Eye serum':'Eyes & Lips','Eye oil':'Eyes & Lips','Under-eye patches':'Eyes & Lips','Lip treatment':'Eyes & Lips','Lip serum':'Eyes & Lips','Lip mask':'Eyes & Lips','Lip scrub':'Eyes & Lips','Lip balm SPF':'Eyes & Lips','Exfoliator':'Exfoliate','Physical scrub':'Exfoliate','Chemical exfoliant':'Exfoliate','Enzyme exfoliant':'Exfoliate','Peeling gel':'Exfoliate','Peeling solution':'Exfoliate','Gommage':'Exfoliate','Face mask':'Masks','Sheet mask':'Masks','Clay mask':'Masks','Mud mask':'Masks','Peel-off mask':'Masks','Overnight mask':'Masks','Hydrating mask':'Masks','Brightening mask':'Masks','Charcoal mask':'Masks','Eye mask':'Masks','Neck mask':'Masks','SPF / Sunscreen':'SPF & Sun','SPF moisturiser':'SPF & Sun','SPF serum':'SPF & Sun','Mineral sunscreen':'SPF & Sun','Chemical sunscreen':'SPF & Sun','Hybrid sunscreen':'SPF & Sun','Tinted SPF':'SPF & Sun','SPF mist':'SPF & Sun','After-sun':'SPF & Sun','Spot treatment':'Targeted','Pimple patch':'Targeted','Acne treatment':'Targeted','Hyperpigmentation treatment':'Targeted','Scar treatment':'Targeted','Rosacea treatment':'Targeted','Neck cream':'Targeted','Hand cream':'Targeted','Cuticle treatment':'Targeted','Collagen supplement':'Supplements','Skin supplement':'Supplements','Vitamin':'Supplements','Probiotic':'Supplements','Gummy supplement':'Supplements'};
+const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Cream cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing water','Cleansing milk','Double cleanse oil','Makeup remover','Eye makeup remover','Cleansing wipes','Toner','Hydrating toner','Exfoliating toner','Astringent toner','Essence','Facial mist','Thermal water spray','Serum','Vitamin C serum','Retinol','Retinoid','Tretinoin','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','PHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Tranexamic acid','Alpha arbutin','Ceramide serum','Centella serum','Snail mucin','Brightening serum','Anti-aging serum','Dark spot serum','Ampoule','Booster','Facial oil treatment','Moisturiser','Gel moisturiser','Cream moisturiser','Lotion','Rich cream','Barrier cream','Water cream','Gel-cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Eye oil','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Lip balm SPF','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Peeling solution','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Peel-off mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','Eye mask','Neck mask','SPF / Sunscreen','SPF moisturiser','SPF serum','Mineral sunscreen','Chemical sunscreen','Hybrid sunscreen','Tinted SPF','SPF mist','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Scar treatment','Rosacea treatment','Neck cream','Hand cream','Cuticle treatment','Collagen supplement','Skin supplement','Vitamin','Probiotic','Gummy supplement'];
+const SKINCARE_STEP_MAP={'Cleanser':'Cleanse','Gel cleanser':'Cleanse','Foam cleanser':'Cleanse','Cream cleanser':'Cleanse','Oil cleanser':'Cleanse','Balm cleanser':'Cleanse','Micellar water':'Cleanse','Cleansing water':'Cleanse','Cleansing milk':'Cleanse','Double cleanse oil':'Cleanse','Makeup remover':'Cleanse','Eye makeup remover':'Cleanse','Cleansing wipes':'Cleanse','Toner':'Tone & Prep','Hydrating toner':'Tone & Prep','Exfoliating toner':'Tone & Prep','Astringent toner':'Tone & Prep','Essence':'Tone & Prep','Facial mist':'Tone & Prep','Thermal water spray':'Tone & Prep','Serum':'Treat','Vitamin C serum':'Treat','Retinol':'Treat','Retinoid':'Treat','Tretinoin':'Treat','Bakuchiol':'Treat','Niacinamide':'Treat','Hyaluronic acid':'Treat','Peptide serum':'Treat','AHA serum':'Treat','BHA serum':'Treat','PHA serum':'Treat','Azelaic acid':'Treat','Salicylic acid':'Treat','Glycolic acid':'Treat','Lactic acid':'Treat','Tranexamic acid':'Treat','Alpha arbutin':'Treat','Ceramide serum':'Treat','Centella serum':'Treat','Snail mucin':'Treat','Brightening serum':'Treat','Anti-aging serum':'Treat','Dark spot serum':'Treat','Ampoule':'Treat','Booster':'Treat','Facial oil treatment':'Treat','Moisturiser':'Moisturise','Gel moisturiser':'Moisturise','Cream moisturiser':'Moisturise','Lotion':'Moisturise','Rich cream':'Moisturise','Barrier cream':'Moisturise','Water cream':'Moisturise','Gel-cream':'Moisturise','Night cream':'Moisturise','Sleeping mask':'Moisturise','Face oil':'Moisturise','Facial balm':'Moisturise','Eye cream':'Eyes & Lips','Eye gel':'Eyes & Lips','Eye serum':'Eyes & Lips','Eye oil':'Eyes & Lips','Under-eye patches':'Eyes & Lips','Lip treatment':'Eyes & Lips','Lip serum':'Eyes & Lips','Lip mask':'Eyes & Lips','Lip scrub':'Eyes & Lips','Lip balm SPF':'Eyes & Lips','Exfoliator':'Exfoliate','Physical scrub':'Exfoliate','Chemical exfoliant':'Exfoliate','Enzyme exfoliant':'Exfoliate','Peeling gel':'Exfoliate','Peeling solution':'Exfoliate','Gommage':'Exfoliate','Face mask':'Masks','Sheet mask':'Masks','Clay mask':'Masks','Mud mask':'Masks','Peel-off mask':'Masks','Overnight mask':'Masks','Hydrating mask':'Masks','Brightening mask':'Masks','Charcoal mask':'Masks','Eye mask':'Masks','Neck mask':'Masks','SPF / Sunscreen':'SPF & Sun','SPF moisturiser':'SPF & Sun','SPF serum':'SPF & Sun','Mineral sunscreen':'SPF & Sun','Chemical sunscreen':'SPF & Sun','Hybrid sunscreen':'SPF & Sun','Tinted SPF':'SPF & Sun','SPF mist':'SPF & Sun','After-sun':'SPF & Sun','Spot treatment':'Targeted','Pimple patch':'Targeted','Acne treatment':'Targeted','Hyperpigmentation treatment':'Targeted','Scar treatment':'Targeted','Rosacea treatment':'Targeted','Neck cream':'Targeted','Hand cream':'Targeted','Cuticle treatment':'Targeted','Collagen supplement':'Supplements','Skin supplement':'Supplements','Vitamin':'Supplements','Probiotic':'Supplements','Gummy supplement':'Supplements'};
 const SKINCARE_STEPS=['Cleanse','Tone & Prep','Treat','Moisturise','Eyes & Lips','SPF & Sun','Exfoliate','Masks','Targeted','Supplements'];
 const STEP_ICONS={'Cleanse':'🧼','Tone & Prep':'💧','Treat':'⚗️','Moisturise':'🫧','Eyes & Lips':'👁️','SPF & Sun':'☀️','Exfoliate':'✨','Masks':'🎭','Targeted':'🎯','Supplements':'💊'};
 let items=[],looks=[],wishlist=[],cats=[],routines=[];
@@ -875,12 +855,19 @@ function setSyncDot(s){const d=g('sync-dot');if(!d)return;d.className='sdot'+(s=
 function getPhotos(col,id){try{return JSON.parse(localStorage.getItem('mph_'+col+'_'+id)||'[]');}catch{return[];}}
 
 function updateBadges(){
+  // Pull latest data written by the Firebase module
+  if(window._items!==undefined)items=window._items;
+  if(window._looks!==undefined)looks=window._looks;
+  if(window._wishlist!==undefined)wishlist=window._wishlist;
+  if(window._cats!==undefined)cats=window._cats;
   const s=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
   s('b-all',items.length);s('b-skincare',items.filter(i=>SKINCARE_TYPES.includes(i.type)).length);s('b-favs',items.filter(i=>i.favourite).length);
   s('b-wish',wishlist.length);s('b-looks',looks.length);
   s('db-stat',items.length+' product'+(items.length!==1?'s':'')+' · synced');
   setSyncDot('ok');
 }
+window.updateBadges=updateBadges;
+window.renderCurrent=function(){renderCurrent();};
 
 async function persist(col,item){if(window.fbSave)await window.fbSave(col,item);}
 async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
@@ -901,8 +888,8 @@ function renderCurrent(){
   else if(view==='compare')rCompare();
   else if(view==='expiry')rExpiry();
   else if(view==='skincare')rSkincare();
-  else if(view==='stats')rStats();
   else if(view==='skincare-stats')rSkincareStats();
+  else if(view==='stats')rStats();
   else if(view==='settings')rSettings();
 }
 function toggleMore(){g('mm').classList.toggle('open');g('mov').classList.toggle('open');}
@@ -1336,16 +1323,16 @@ function rSkincare(){
     return true;
   }).sort(sortFns[so]||sortFns.name);
   sCH('<div class="ch"><div class="cht">Skincare</div><div class="chs">'+sc.length+' skincare product'+(sc.length!==1?'s':'')+' in your collection</div></div>');
-  sFB('<div class="fb"><div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." oninput="rSkincare()" value="'+sr+'"></div><select class="fs" id="scstep" onchange="rSkincare()"><option value="">All steps</option>'+SKINCARE_STEPS.map(s=>'<option value="'+s+'"'+(tf===s?' selected':'')+'>'+(STEP_ICONS[s]||'')+' '+s+'</option>').join('')+'</select><select class="fs" id="scsort" onchange="rSkincare()"><option value="name">A–Z</option><option value="brand">Brand</option><option value="type">Type</option><option value="newest">Newest</option><option value="expiry">Expiry</option></select><div class="vt"><button class="vb '+(gmode==='grid'?'active':'')+'" onclick="gmode='grid';rSkincare()">&#x229E;</button><button class="vb '+(gmode==='list'?'active':'')+'" onclick="gmode='list';rSkincare()">&#x2630;</button></div><button class="btn sm pr" onclick="openAddItem()" style="margin-left:auto">+ Add skincare</button></div>');
-  if(!sc.length){sCt('<div class="empty"><div class="ei">&#x1F9F4;</div><p>No skincare products yet — add your first one!</p></div>');return;}
-  if(!filtered.length){sCt('<div class="empty"><div class="ei">&#x1F50D;</div><p>No products match.</p></div>');return;}
+  sFB('<div class="fb"><div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." oninput="rSkincare()" value="'+sr+'"></div><select class="fs" id="scstep" onchange="rSkincare()"><option value="">All steps</option>'+SKINCARE_STEPS.map(s=>'<option value="'+s+'"'+(tf===s?' selected':'')+'>'+(STEP_ICONS[s]||'')+' '+s+'</option>').join('')+'</select><select class="fs" id="scsort" onchange="rSkincare()"><option value="name">A–Z</option><option value="brand">Brand</option><option value="type">Type</option><option value="newest">Newest</option><option value="expiry">Expiry</option></select><div class="vt"><button class="vb '+(gmode==='grid'?'active':'')+'" onclick="gmode='grid';rSkincare()">⊞</button><button class="vb '+(gmode==='list'?'active':'')+'" onclick="gmode='list';rSkincare()">☰</button></div><button class="btn sm pr" onclick="openAddItem()" style="margin-left:auto">+ Add skincare</button></div>');
+  if(!sc.length){sCt('<div class="empty"><div class="ei">🧴</div><p>No skincare products yet — add your first one!</p></div>');return;}
+  if(!filtered.length){sCt('<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>');return;}
   if(!tf&&!sr){
     const grouped={};SKINCARE_STEPS.forEach(s=>{grouped[s]=[];});
     filtered.forEach(i=>{const step=SKINCARE_STEP_MAP[i.type]||'Targeted';if(grouped[step])grouped[step].push(i);});
     let html='';
     SKINCARE_STEPS.forEach(step=>{
       if(!grouped[step]||!grouped[step].length)return;
-      html+='<div style="margin-bottom:20px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">'+(STEP_ICONS[step]||'&#x1F9F4;')+'</span><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">'+step+'</span><span style="font-size:10px;color:var(--text3)">('+grouped[step].length+')</span></div><div class="'+(gmode==='grid'?'grid':'')+'">'+(gmode==='grid'?grouped[step].map(i=>iCard(i)).join(''):grouped[step].map(i=>iLR(i)).join(''))+'</div></div>';
+      html+='<div style="margin-bottom:20px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">'+(STEP_ICONS[step]||'🧴')+'</span><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">'+step+'</span><span style="font-size:10px;color:var(--text3)">('+grouped[step].length+')</span></div><div class="'+(gmode==='grid'?'grid':'')+'">'+(gmode==='grid'?grouped[step].map(i=>iCard(i)).join(''):grouped[step].map(i=>iLR(i)).join(''))+'</div></div>';
     });
     sCt(html);
   } else {
@@ -1356,37 +1343,34 @@ function rSkincare(){
 function rSkincareStats(){
   const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type));
   sCH('<div class="ch"><div class="cht">Skincare insights</div><div class="chs">A deep dive into your skincare</div></div>');sFB('');
-  if(!sc.length){sCt('<div class="empty"><div class="ei">&#x1FAE7;</div><p>Add skincare products to see insights.</p></div>');return;}
+  if(!sc.length){sCt('<div class="empty"><div class="ei">🫧</div><p>Add skincare products to see insights.</p></div>');return;}
   const byStep=SKINCARE_STEPS.reduce((acc,s)=>{acc[s]=sc.filter(i=>SKINCARE_STEP_MAP[i.type]===s).length;return acc;},{});
   const byBrand=sc.reduce((acc,i)=>{const k=i.brand||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
   const byType=sc.reduce((acc,i)=>{const k=i.type||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
   const byRating=sc.reduce((acc,i)=>{if(i.rating){acc[i.rating]=(acc[i.rating]||0)+1;}return acc;},{});
   const byStock=sc.reduce((acc,i)=>{const k=i.stock||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
   const favs=sc.filter(i=>i.favourite).length;
-  const withSPF=sc.filter(i=>(i.type||'').toLowerCase().includes('spf')||(i.type||'').toLowerCase().includes('sunscreen')).length;
   const prices=sc.map(i=>parseFloat((i.price||'').replace(/[^0-9.]/g,'')||0)).filter(p=>p>0);
   const total=prices.reduce((a,b)=>a+b,0);
-  const sym=sc.find(i=>i.price)?sc.find(i=>i.price).price.replace(/[\d.,\s]/g,''):'\u00a3';
-  const avgPrice=prices.length?Math.round(total/prices.length):0;
+  const sym=(sc.find(i=>i.price)||{price:'£'}).price.replace(/[\d.,\s]/g,'')||'£';
   const lowStock=sc.filter(i=>i.stock==='Low'||i.stock==='Empty').length;
   const actives=['Retinol','Retinoid','Tretinoin','Bakuchiol','Niacinamide','Vitamin C serum','Peptide serum','AHA serum','BHA serum','PHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Tranexamic acid','Alpha arbutin','Ceramide serum','Centella serum','Snail mucin'];
   const activeCount=sc.filter(i=>actives.includes(i.type)).length;
   function chart(ti,obj,col){const s=Object.entries(obj).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);if(!s.length)return'';const mx=Math.max(...s.map(x=>x[1]),1);return'<div class="cb"><div class="ct">'+ti+'</div>'+s.map(([k,v])=>'<div class="br"><div class="bl">'+k+'</div><div class="bt"><div class="bf" style="width:'+Math.round(v/mx*100)+'%;background:'+col+'"></div></div><div class="bc">'+v+'</div></div>').join('')+'</div>';}
   const essentialSteps=['Cleanse','Moisturise','SPF & Sun'];
-  const covered=essentialSteps.filter(s=>byStep[s]>0);
-  const score=Math.round(covered.length/essentialSteps.length*100);
+  const score=Math.round(essentialSteps.filter(s=>byStep[s]>0).length/essentialSteps.length*100);
   const scoreCol=score===100?'#3b6d11':score>=66?'#854f0b':'#a32d2d';
   const expired=sc.filter(i=>i.expiry&&expiryStatus(i.expiry)&&expiryStatus(i.expiry).cls==='exp-expired').length;
   const expSoon=sc.filter(i=>i.expiry&&expiryStatus(i.expiry)&&expiryStatus(i.expiry).cls==='exp-soon').length;
   sCt(
-    '<div class="sw2">'+[['Skincare',sc.length],['Favourites',favs],['Actives',activeCount],['SPF products',withSPF],['Low/empty',lowStock],(expired||expSoon)?['Expiring',expired+expSoon]:null,prices.length?['Total spent',sym+Math.round(total)]:null,prices.length?['Avg price',sym+avgPrice]:null].filter(Boolean).map(([l,v])=>'<div class="stb"><div class="stl">'+l+'</div><div class="stv">'+v+'</div></div>').join('')+'</div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">&#x1F6E1;&#xFE0F; Routine completeness</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="flex:1;height:10px;background:var(--bg3);border-radius:99px;overflow:hidden"><div style="width:'+score+'%;height:100%;background:'+scoreCol+';border-radius:99px;transition:width .6s"></div></div><span style="font-size:13px;font-weight:700;color:'+scoreCol+'">'+score+'%</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">'+essentialSteps.map(s=>'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(byStep[s]>0?'#eaf3de':'var(--bg3)')+';color:'+(byStep[s]>0?'#3b6d11':'var(--text3)')+';font-weight:600">'+(byStep[s]>0?'\u2713 ':'')+s+'</span>').join('')+'</div>'+(score<100?'<p style="font-size:11px;color:var(--text3);margin-top:8px">Missing: '+essentialSteps.filter(s=>!byStep[s]).join(', ')+'</p>':'<p style="font-size:11px;color:#3b6d11;margin-top:8px">Core routine covered! &#x1F389;</p>')+'</div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">&#x1F4CB; By routine step</div>'+SKINCARE_STEPS.map(step=>{const count=byStep[step]||0;const mx=Math.max(...Object.values(byStep),1);return'<div class="br"><div class="bl">'+(STEP_ICONS[step]||'')+' '+step+'</div><div class="bt"><div class="bf" style="width:'+(count?Math.max(Math.round(count/mx*100),4):0)+'%;background:#00796B"></div></div><div class="bc">'+count+'</div></div>';}).join('')+'</div>'+
+    '<div class="sw2">'+[['Skincare',sc.length],['Favourites',favs],['Actives',activeCount],['Low/empty',lowStock],(expired||expSoon)?['Expiring',expired+expSoon]:null,prices.length?['Total spent',sym+Math.round(total)]:null].filter(Boolean).map(([l,v])=>'<div class="stb"><div class="stl">'+l+'</div><div class="stv">'+v+'</div></div>').join('')+'</div>'+
+    '<div class="cb" style="margin-bottom:10px"><div class="ct">🛡️ Routine completeness</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="flex:1;height:10px;background:var(--bg3);border-radius:99px;overflow:hidden"><div style="width:'+score+'%;height:100%;background:'+scoreCol+';border-radius:99px"></div></div><span style="font-size:13px;font-weight:700;color:'+scoreCol+'">'+score+'%</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">'+essentialSteps.map(s=>'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(byStep[s]>0?'#eaf3de':'var(--bg3)')+';color:'+(byStep[s]>0?'#3b6d11':'var(--text3)')+';font-weight:600">'+(byStep[s]>0?'✓ ':'')+s+'</span>').join('')+'</div></div>'+
+    '<div class="cb" style="margin-bottom:10px"><div class="ct">📋 By routine step</div>'+SKINCARE_STEPS.map(step=>{const count=byStep[step]||0;const mx=Math.max(...Object.values(byStep),1);return'<div class="br"><div class="bl">'+(STEP_ICONS[step]||'')+' '+step+'</div><div class="bt"><div class="bf" style="width:'+(count?Math.max(Math.round(count/mx*100),4):0)+'%;background:#00796B"></div></div><div class="bc">'+count+'</div></div>';}).join('')+'</div>'+
     '<div class="charts">'+chart('By brand',byBrand,'#7B1FA2')+chart('By type',byType,'#0047AB')+chart('By rating',byRating,'#C9A72A')+chart('By stock',byStock,'#C66E3A')+'</div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">&#x2697;&#xFE0F; Active ingredients</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+actives.map(a=>{const has=sc.some(i=>i.type===a);return'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(has?'#e8eaf6':'var(--bg3)')+';color:'+(has?'#3f0099':'var(--text3)')+';font-weight:'+(has?600:400)+'">'+(has?'\u2713 ':'')+a.replace(' serum','').replace(' acid','')+'</span>';}).join('')+'</div></div>'+
-    (favs?'<div class="cb"><div class="ct">&#x2B50; Holy grails</div>'+sc.filter(i=>i.favourite).map(i=>{const photos=getPhotos('items',i.id);const fp=photos[0]||null;const h=hx(i.color);const fg=isLight(h)?'#1a1705':'#faf9f6';return'<div onclick="openDetail(''+i.id+'')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'+(fp?'<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="'+fp+'" style="width:100%;height:100%;object-fit:cover"></div>':'<div style="width:36px;height:36px;border-radius:8px;background:'+h+';color:'+fg+';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(cats.find(c=>c.id===i.category)||{icon:'&#x1F9F4;'}).icon+'</div>')+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+i.name+'</div><div style="font-size:11px;color:var(--text2)">'+(i.brand&&i.type?i.brand+' · '+i.type:i.brand||i.type||'')+'</div></div>'+(i.rating?'<span style="font-size:11px;color:var(--text2)">'+i.rating.split(' ')[0]+'</span>':'')+'</div>';}).join('')+'</div>':'')
+    '<div class="cb" style="margin-bottom:10px"><div class="ct">⚗️ Active ingredients</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+actives.map(a=>{const has=sc.some(i=>i.type===a);return'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(has?'#e8eaf6':'var(--bg3)')+';color:'+(has?'#3f0099':'var(--text3)')+';font-weight:'+(has?600:400)+'">'+(has?'✓ ':'')+a.replace(' serum','').replace(' acid','')+'</span>';}).join('')+'</div></div>'
   );
 }
+
 let _tt;
 function showToast(msg){const el=g('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ov').forEach(o=>o.style.display='none');closeMore();}});
