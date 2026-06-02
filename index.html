@@ -13,12 +13,12 @@ import{getFirestore,doc,collection,setDoc,deleteDoc,onSnapshot,writeBatch}from"h
 // 🔧 YOUR FIREBASE CONFIG — paste yours here
 // ══════════════════════════════════════════
 const firebaseConfig={
-  apiKey:"AIzaSyBHpwQJUxvwMTwXvrwAFyuGydOM7EqCBhw",
-  authDomain:"wardrobe-sjw.firebaseapp.com",
-  projectId:"wardrobe-sjw",
-  storageBucket:"wardrobe-sjw.firebasestorage.app",
-  messagingSenderId:"2487840884",
-  appId:"1:2487840884:web:29f2bf8177a558736de121"
+  apiKey:"AIzaSyACA-KrhKyYlIh76QgZimeqPW6GxuuyAKQ",
+  authDomain:"makeup-sw.firebaseapp.com",
+  projectId:"makeup-sw",
+  storageBucket:"makeup-sw.firebasestorage.app",
+  messagingSenderId:"847276373022",
+  appId:"1:847276373022:web:6513d1cc6a52071a102a0f"
 };
 // ══════════════════════════════════════════
 
@@ -50,6 +50,7 @@ onAuthStateChanged(auth,user=>{
     g('auth-screen').style.display='none';
     g('app-root').style.display='flex';
     g('user-email-display').textContent=user.email;
+    g('content').innerHTML='<div class="empty"><div class="ei">🔄</div><p id="dbg">Starting listeners...</p></div>';
     startListeners();
   }else{
     _uid=null;_unsubs.forEach(u=>u());_unsubs=[];
@@ -58,28 +59,48 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
+function dbg(msg){console.log('[MU]',msg);const el=document.getElementById('dbg');if(el)el.textContent=msg;}
+
 function startListeners(){
   _unsubs.forEach(u=>u());_unsubs=[];
+  dbg('Connecting to Firestore...');
   let loaded={items:false,looks:false,wishlist:false,cats:false};
+  function tryRender(){
+    if(window.updateBadges && window.renderCurrent){
+      window.updateBadges();
+      window.renderCurrent();
+    }
+  }
   function checkLoad(){
     if(!Object.values(loaded).every(Boolean))return;
-    // Poll until the plain script has defined updateBadges (max 3s)
+    dbg('All loaded! Rendering...');
     let tries=0;
     const run=()=>{
-      if(window.updateBadges){window.updateBadges();window.renderCurrent();}
-      else if(tries++<30){setTimeout(run,100);}
+      if(window.updateBadges){tryRender();}
+      else if(tries++<50){setTimeout(run,100);}
     };
     run();
   }
-  const sub=(col,setter,key)=>onSnapshot(collection(db,'users',_uid,'makeup_'+col),snap=>{
-    setter(snap.docs.map(d=>d.data()));
-    if(!loaded[key]){loaded[key]=true;checkLoad();}
-    else if(window.updateBadges)window.updateBadges();
-  });
-  _unsubs.push(sub('items',d=>{window._items=d;items=d;},'items'));
-  _unsubs.push(sub('looks',d=>{window._looks=d;looks=d;},'looks'));
-  _unsubs.push(sub('wishlist',d=>{window._wishlist=d;wishlist=d;},'wishlist'));
-  _unsubs.push(sub('cats',d=>{window._cats=d;cats=d;if(!cats.length)seedCats();},'cats'));
+  const sub=(col,setter,key)=>{
+    dbg('Subscribing to '+col+'...');
+    return onSnapshot(
+      collection(db,'users',_uid,'makeup_'+col),
+      snap=>{
+        dbg('Got '+col+': '+snap.docs.length+' docs');
+        setter(snap.docs.map(d=>d.data()));
+        if(!loaded[key]){loaded[key]=true;checkLoad();}
+        else{tryRender();}
+      },
+      err=>{
+        dbg('ERROR on '+col+': '+err.code+' - '+err.message);
+        if(!loaded[key]){loaded[key]=true;checkLoad();}
+      }
+    );
+  };
+  _unsubs.push(sub('items',d=>{window._items=d;},'items'));
+  _unsubs.push(sub('looks',d=>{window._looks=d;},'looks'));
+  _unsubs.push(sub('wishlist',d=>{window._wishlist=d;},'wishlist'));
+  _unsubs.push(sub('cats',d=>{window._cats=d;if(!d.length)seedCats();},'cats'));
 }
 
 async function seedCats(){
@@ -1374,6 +1395,19 @@ function rSkincareStats(){
 let _tt;
 function showToast(msg){const el=g('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ov').forEach(o=>o.style.display='none');closeMore();}});
+
+// Force render once data arrives — polls every 500ms for up to 30s
+(function waitForData(){
+  let attempts=0;
+  const check=()=>{
+    if(window._items!==undefined&&window._looks!==undefined&&window._wishlist!==undefined&&window._cats!==undefined){
+      updateBadges();renderCurrent();
+    } else if(attempts++<60){
+      setTimeout(check,500);
+    }
+  };
+  setTimeout(check,500);
+})();
 </script>
 </body>
 </html>
