@@ -415,14 +415,16 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
 <nav class="bnav">
   <div class="bni">
     <button class="bb active" id="bnav-all" onclick="nav('all')"><span class="bic">💄</span>Makeup</button>
+    <button class="bb" id="bnav-skincare" onclick="nav('skincare')"><span class="bic">🧴</span>Skincare</button>
+    <button class="bb" id="bnav-haircare" onclick="nav('haircare')"><span class="bic">💇</span>Haircare</button>
     <button class="bb" id="bnav-favs" onclick="nav('favs')"><span class="bic">⭐</span>Favs</button>
-    <button class="bb" id="bnav-looks" onclick="nav('looks')"><span class="bic">✨</span>Looks</button>
-    <button class="bb" id="bnav-routines" onclick="nav('routines')"><span class="bic">🗓️</span>Routines</button>
     <button class="bb" id="bnav-more" onclick="toggleMore()"><span class="bic">•••</span>More</button>
   </div>
 </nav>
 <div class="mov" id="mov" onclick="closeMore()"></div>
 <div class="mm" id="mm">
+  <button class="mbtn" onclick="nav('looks');closeMore()"><span style="font-size:18px">✨</span>Looks</button>
+  <button class="mbtn" onclick="nav('routines');closeMore()"><span style="font-size:18px">🗓️</span>Routines</button>
   <button class="mbtn" onclick="nav('compare');closeMore()"><span style="font-size:18px">⚖️</span>Compare products</button>
   <button class="mbtn" onclick="nav('wishlist');closeMore()"><span style="font-size:18px">🌟</span>Wishlist</button>
   <button class="mbtn" onclick="nav('expiry');closeMore()"><span style="font-size:18px">📅</span>Expiry tracker</button>
