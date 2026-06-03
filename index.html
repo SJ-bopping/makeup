@@ -4,124 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Makeup</title>
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,collection,setDoc,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+function g(id){return document.getElementById(id);}
 
-// ══════════════════════════════════════════
-// 🔧 YOUR FIREBASE CONFIG — paste yours here
-// ══════════════════════════════════════════
 const firebaseConfig={
-  apiKey:"AIzaSyACA-KrhKyYlIh76QgZimeqPW6GxuuyAKQ",
-  authDomain:"makeup-sw.firebaseapp.com",
-  projectId:"makeup-sw",
-  storageBucket:"makeup-sw.firebasestorage.app",
-  messagingSenderId:"847276373022",
-  appId:"1:847276373022:web:6513d1cc6a52071a102a0f"
+  apiKey:"AIzaSyBHpwQJUxvwMTwXvrwAFyuGydOM7EqCBhw",
+  authDomain:"wardrobe-sjw.firebaseapp.com",
+  projectId:"wardrobe-sjw",
+  storageBucket:"wardrobe-sjw.firebasestorage.app",
+  messagingSenderId:"2487840884",
+  appId:"1:2487840884:web:29f2bf8177a558736de121"
 };
-// ══════════════════════════════════════════
 
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
 let _uid=null,_unsubs=[];
 
-window._fbSignOut=()=>signOut(auth);
+window._fbSignOut=()=>auth.signOut();
 window.handleLogin=async()=>{
   const e=g('auth-email').value.trim(),p=g('auth-pass').value,err=g('auth-err');
   err.textContent='';
-  try{await signInWithEmailAndPassword(auth,e,p);}
+  try{await auth.signInWithEmailAndPassword(e,p);}
   catch(ex){err.textContent=fe(ex.code);}
 };
 window.handleSignup=async()=>{
   const e=g('auth-email').value.trim(),p=g('auth-pass').value,err=g('auth-err');
   err.textContent='';
   if(p.length<6){err.textContent='Password must be 6+ characters.';return;}
-  try{await createUserWithEmailAndPassword(auth,e,p);}
+  try{await auth.createUserWithEmailAndPassword(e,p);}
   catch(ex){err.textContent=fe(ex.code);}
 };
 function fe(c){return({'auth/invalid-email':'Invalid email.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/email-already-in-use':'Email already in use — try logging in.','auth/invalid-credential':'Email or password incorrect.'})[c]||'Something went wrong.';}
-function g(id){return document.getElementById(id);}
 
-onAuthStateChanged(auth,user=>{
-  if(user){
-    _uid=user.uid;
-    g('auth-screen').style.display='none';
-    g('app-root').style.display='flex';
-    g('user-email-display').textContent=user.email;
-    g('content').innerHTML='<div class="empty"><div class="ei">🔄</div><p id="dbg">Starting listeners...</p></div>';
-    startListeners();
-  }else{
-    _uid=null;_unsubs.forEach(u=>u());_unsubs=[];
-    g('auth-screen').style.display='flex';
-    g('app-root').style.display='none';
-  }
+document.addEventListener('DOMContentLoaded',()=>{
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      _uid=user.uid;
+      g('auth-screen').style.display='none';
+      g('app-root').style.display='flex';
+      g('user-email-display').textContent=user.email;
+      startListeners();
+    }else{
+      _uid=null;_unsubs.forEach(u=>u());_unsubs=[];
+      g('auth-screen').style.display='flex';
+      g('app-root').style.display='none';
+    }
+  });
 });
-
-function dbg(msg){console.log('[MU]',msg);const el=document.getElementById('dbg');if(el)el.textContent=msg;}
 
 function startListeners(){
   _unsubs.forEach(u=>u());_unsubs=[];
-  dbg('Connecting to Firestore...');
   let loaded={items:false,looks:false,wishlist:false,cats:false};
-  function tryRender(){
-    if(window.updateBadges && window.renderCurrent){
-      window.updateBadges();
-      window.renderCurrent();
+  function checkLoad(){
+    if(Object.values(loaded).every(Boolean)){
+      [50,200,500].forEach(ms=>setTimeout(()=>{
+        if(typeof updateBadges==='function'&&typeof renderCurrent==='function'){
+          updateBadges();renderCurrent();
+        }
+      },ms));
     }
   }
-  function checkLoad(){
-    if(!Object.values(loaded).every(Boolean))return;
-    dbg('All loaded! Rendering...');
-    let tries=0;
-    const run=()=>{
-      if(window.updateBadges){tryRender();}
-      else if(tries++<50){setTimeout(run,100);}
-    };
-    run();
-  }
-  const sub=(col,setter,key)=>{
-    dbg('Subscribing to '+col+'...');
-    return onSnapshot(
-      collection(db,'users',_uid,'makeup_'+col),
-      snap=>{
-        dbg('Got '+col+': '+snap.docs.length+' docs');
-        setter(snap.docs.map(d=>d.data()));
-        if(!loaded[key]){loaded[key]=true;checkLoad();}
-        else{tryRender();}
-      },
-      err=>{
-        dbg('ERROR on '+col+': '+err.code+' - '+err.message);
-        if(!loaded[key]){loaded[key]=true;checkLoad();}
-      }
-    );
-  };
-  _unsubs.push(sub('items',d=>{window._items=d;},'items'));
-  _unsubs.push(sub('looks',d=>{window._looks=d;},'looks'));
-  _unsubs.push(sub('wishlist',d=>{window._wishlist=d;},'wishlist'));
-  _unsubs.push(sub('cats',d=>{window._cats=d;if(!d.length)seedCats();},'cats'));
+  const sub=(col,setter,key)=>db.collection('users').doc(_uid).collection('makeup_'+col).onSnapshot(snap=>{
+    setter(snap.docs.map(d=>d.data()));
+    if(!loaded[key]){loaded[key]=true;checkLoad();}
+    else if(typeof updateBadges==='function')updateBadges();
+  });
+  _unsubs.push(sub('items',d=>{items=d;},'items'));
+  _unsubs.push(sub('looks',d=>{looks=d;},'looks'));
+  _unsubs.push(sub('wishlist',d=>{wishlist=d;},'wishlist'));
+  _unsubs.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
 }
 
 async function seedCats(){
-  const b=writeBatch(db);
-  DEFAULT_CATS.forEach(c=>b.set(doc(db,'users',_uid,'makeup_cats',c.id),c));
+  const b=db.batch();
+  DEFAULT_CATS.forEach(c=>b.set(db.collection('users').doc(_uid).collection('makeup_cats').doc(c.id),c));
   await b.commit();
 }
 
 window.fbSave=async(col,item)=>{
   if(!_uid)return;setSyncDot('syncing');
   try{
-    const cleaned=Object.fromEntries(Object.entries(item).filter(([k,v])=>k!=='photos'&&k!=='photo'&&v!==undefined).map(([k,v])=>[k,Array.isArray(v)?v.filter(x=>x!==undefined):v]));
-    if(item.photos?.length)localStorage.setItem('mph_'+col+'_'+item.id,JSON.stringify(item.photos));
-    else if(item.photo)localStorage.setItem('mph_'+col+'_'+item.id,JSON.stringify([item.photo]));
-    cleaned.hasPhoto=!!(item.photos?.length||item.photo);
-    cleaned.photoCount=item.photos?.length||(item.photo?1:0);
-    await setDoc(doc(db,'users',_uid,'makeup_'+col,item.id),cleaned);
+    const cleaned={};
+    for(const[k,v]of Object.entries(item)){
+      if(v===undefined||v===null)continue;
+      cleaned[k]=Array.isArray(v)?v.filter(x=>x!=null):v;
+    }
+    await db.collection('users').doc(_uid).collection('makeup_'+col).doc(item.id).set(cleaned);
     setSyncDot('ok');
   }catch(e){setSyncDot('error');console.error(e);}
 };
-window.fbDel=async(col,id)=>{if(!_uid)return;try{await deleteDoc(doc(db,'users',_uid,'makeup_'+col,id));}catch(e){console.error(e);}};
+window.fbDel=async(col,id)=>{
+  if(!_uid)return;
+  try{await db.collection('users').doc(_uid).collection('makeup_'+col).doc(id).delete();}
+  catch(e){console.error(e);}
+};
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
@@ -395,8 +375,9 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
     </div>
     <div class="ns">
       <span class="nl">Browse</span>
-      <button class="nb active" id="nav-all" onclick="nav('all')"><span class="ni">💄</span>All makeup<span class="nbg" id="b-all">0</span></button>
+      <button class="nb active" id="nav-all" onclick="nav('all')"><span class="ni">💄</span>Makeup<span class="nbg" id="b-all">0</span></button>
       <button class="nb" id="nav-skincare" onclick="nav('skincare')"><span class="ni">🧴</span>Skincare<span class="nbg" id="b-skincare">0</span></button>
+      <button class="nb" id="nav-haircare" onclick="nav('haircare')"><span class="ni">💇</span>Haircare<span class="nbg" id="b-haircare">0</span></button>
       <button class="nb" id="nav-favs" onclick="nav('favs')"><span class="ni">⭐</span>Favourites<span class="nbg" id="b-favs">0</span></button>
       <button class="nb" id="nav-wishlist" onclick="nav('wishlist')"><span class="ni">🌟</span>Wishlist<span class="nbg" id="b-wish">0</span></button>
     </div>
@@ -410,7 +391,6 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <span class="nl">Analyse</span>
       <button class="nb" id="nav-compare" onclick="nav('compare')"><span class="ni">⚖️</span>Compare</button>
       <button class="nb" id="nav-stats" onclick="nav('stats')"><span class="ni">📊</span>Insights</button>
-      <button class="nb" id="nav-skincare-stats" onclick="nav('skincare-stats')"><span class="ni">🫧</span>Skincare insights</button>
     </div>
     <div class="ns">
       <span class="nl">Manage</span>
@@ -444,7 +424,6 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
 <div class="mov" id="mov" onclick="closeMore()"></div>
 <div class="mm" id="mm">
   <button class="mbtn" onclick="nav('compare');closeMore()"><span style="font-size:18px">⚖️</span>Compare products</button>
-  <button class="mbtn" onclick="nav('skincare');closeMore()"><span style="font-size:18px">🧴</span>Skincare</button>
   <button class="mbtn" onclick="nav('wishlist');closeMore()"><span style="font-size:18px">🌟</span>Wishlist</button>
   <button class="mbtn" onclick="nav('expiry');closeMore()"><span style="font-size:18px">📅</span>Expiry tracker</button>
   <button class="mbtn" onclick="nav('stats');closeMore()"><span style="font-size:18px">📊</span>Insights</button>
@@ -480,42 +459,77 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
               <option>Lip oil</option><option>Lip balm</option><option>Lip tint</option><option>Lip plumper</option>
               <option>Lip stain</option>
             </optgroup>
-            <optgroup label="— Cleanse —">
-              <option>Cleanser</option><option>Gel cleanser</option><option>Foam cleanser</option><option>Cream cleanser</option><option>Oil cleanser</option><option>Balm cleanser</option><option>Micellar water</option><option>Cleansing water</option><option>Cleansing milk</option><option>Double cleanse oil</option><option>Makeup remover</option><option>Eye makeup remover</option><option>Cleansing wipes</option>
+            <optgroup class="sc-opts" label="— Cleanse —">
+              <option>Cleanser</option><option>Gel cleanser</option><option>Foam cleanser</option><option>Oil cleanser</option>
+              <option>Balm cleanser</option><option>Micellar water</option><option>Cleansing milk</option>
+              <option>Makeup remover</option><option>Eye makeup remover</option>
             </optgroup>
-            <optgroup label="— Tone & Prep —">
-              <option>Toner</option><option>Hydrating toner</option><option>Exfoliating toner</option><option>Astringent toner</option><option>Essence</option><option>Facial mist</option><option>Thermal water spray</option>
+            <optgroup class="sc-opts" label="— Tone & Prep —">
+              <option>Toner</option><option>Hydrating toner</option><option>Exfoliating toner</option>
+              <option>Essence</option><option>Facial mist</option>
             </optgroup>
-            <optgroup label="— Treat —">
-              <option>Serum</option><option>Vitamin C serum</option><option>Retinol</option><option>Retinoid</option><option>Tretinoin</option><option>Bakuchiol</option><option>Niacinamide</option><option>Hyaluronic acid</option><option>Peptide serum</option><option>AHA serum</option><option>BHA serum</option><option>PHA serum</option><option>Azelaic acid</option><option>Salicylic acid</option><option>Glycolic acid</option><option>Lactic acid</option><option>Tranexamic acid</option><option>Alpha arbutin</option><option>Ceramide serum</option><option>Centella serum</option><option>Snail mucin</option><option>Brightening serum</option><option>Anti-aging serum</option><option>Dark spot serum</option><option>Ampoule</option><option>Booster</option><option>Facial oil treatment</option>
+            <optgroup class="sc-opts" label="— Treat —">
+              <option>Serum</option><option>Vitamin C serum</option><option>Retinol</option><option>Retinoid</option>
+              <option>Bakuchiol</option><option>Niacinamide</option><option>Hyaluronic acid</option><option>Peptide serum</option>
+              <option>AHA serum</option><option>BHA serum</option><option>Azelaic acid</option><option>Salicylic acid</option>
+              <option>Glycolic acid</option><option>Lactic acid</option><option>Alpha arbutin</option><option>Ceramide serum</option>
+              <option>Snail mucin</option><option>Brightening serum</option><option>Dark spot serum</option>
+              <option>Ampoule</option><option>Booster</option>
             </optgroup>
-            <optgroup label="— Moisturise —">
-              <option>Moisturiser</option><option>Gel moisturiser</option><option>Cream moisturiser</option><option>Lotion</option><option>Rich cream</option><option>Barrier cream</option><option>Water cream</option><option>Gel-cream</option><option>Night cream</option><option>Sleeping mask</option><option>Face oil</option><option>Facial balm</option>
+            <optgroup class="sc-opts" label="— Moisturise —">
+              <option>Moisturiser</option><option>Gel moisturiser</option><option>Rich cream</option><option>Barrier cream</option>
+              <option>Night cream</option><option>Sleeping mask</option><option>Face oil</option><option>Facial balm</option>
             </optgroup>
-            <optgroup label="— Eyes & Lips —">
-              <option>Eye cream</option><option>Eye gel</option><option>Eye serum</option><option>Eye oil</option><option>Under-eye patches</option><option>Lip treatment</option><option>Lip serum</option><option>Lip mask</option><option>Lip scrub</option><option>Lip balm SPF</option>
+            <optgroup class="sc-opts" label="— Eyes & Lips —">
+              <option>Eye cream</option><option>Eye gel</option><option>Eye serum</option><option>Under-eye patches</option>
+              <option>Lip treatment</option><option>Lip serum</option><option>Lip mask</option><option>Lip scrub</option>
             </optgroup>
-            <optgroup label="— Exfoliate —">
-              <option>Exfoliator</option><option>Physical scrub</option><option>Chemical exfoliant</option><option>Enzyme exfoliant</option><option>Peeling gel</option><option>Peeling solution</option><option>Gommage</option>
+            <optgroup class="sc-opts" label="— Exfoliate —">
+              <option>Exfoliator</option><option>Physical scrub</option><option>Chemical exfoliant</option>
+              <option>Enzyme exfoliant</option><option>Peeling gel</option><option>Gommage</option>
             </optgroup>
-            <optgroup label="— Masks —">
-              <option>Face mask</option><option>Sheet mask</option><option>Clay mask</option><option>Mud mask</option><option>Peel-off mask</option><option>Overnight mask</option><option>Hydrating mask</option><option>Brightening mask</option><option>Charcoal mask</option><option>Eye mask</option><option>Neck mask</option>
+            <optgroup class="sc-opts" label="— Masks —">
+              <option>Face mask</option><option>Sheet mask</option><option>Clay mask</option><option>Mud mask</option>
+              <option>Overnight mask</option><option>Hydrating mask</option><option>Brightening mask</option><option>Charcoal mask</option>
             </optgroup>
-            <optgroup label="— SPF & Sun —">
-              <option>SPF / Sunscreen</option><option>SPF moisturiser</option><option>SPF serum</option><option>Mineral sunscreen</option><option>Chemical sunscreen</option><option>Hybrid sunscreen</option><option>Tinted SPF</option><option>SPF mist</option><option>After-sun</option>
+            <optgroup class="sc-opts" label="— SPF & Sun —">
+              <option>SPF / Sunscreen</option><option>SPF moisturiser</option><option>Mineral sunscreen</option>
+              <option>Chemical sunscreen</option><option>Tinted SPF</option><option>After-sun</option>
             </optgroup>
-            <optgroup label="— Targeted —">
-              <option>Spot treatment</option><option>Pimple patch</option><option>Acne treatment</option><option>Hyperpigmentation treatment</option><option>Scar treatment</option><option>Rosacea treatment</option><option>Neck cream</option><option>Hand cream</option><option>Cuticle treatment</option>
+            <optgroup class="sc-opts" label="— Targeted —">
+              <option>Spot treatment</option><option>Pimple patch</option><option>Acne treatment</option>
+              <option>Hyperpigmentation treatment</option><option>Neck cream</option><option>Hand cream</option>
             </optgroup>
-            <optgroup label="— Supplements —">
-              <option>Collagen supplement</option><option>Skin supplement</option><option>Vitamin</option><option>Probiotic</option><option>Gummy supplement</option>
+            <optgroup class="sc-opts" label="— Supplements —">
+              <option>Collagen supplement</option><option>Skin supplement</option><option>Probiotic</option><option>Gummy supplement</option>
             </optgroup>
             <optgroup label="— Body —">
               <option>Body lotion</option><option>Body oil</option><option>Body scrub</option><option>Body SPF</option>
               <option>Self-tanner</option><option>Gradual tan</option><option>Deodorant</option>
             </optgroup>
-            <optgroup label="— Hair —">
+            <optgroup class="hc-opts" label="— Hair —">
               <option>Hair mask</option><option>Hair oil</option><option>Scalp treatment</option><option>Dry shampoo</option>
+            </optgroup>
+            <optgroup class="hc-opts" label="— Shampoo & Conditioner —">
+              <option>Shampoo</option><option>Conditioner</option><option>Co-wash</option><option>Clarifying shampoo</option>
+              <option>Dry shampoo</option><option>2-in-1 shampoo</option>
+            </optgroup>
+            <optgroup class="hc-opts" label="— Treatment —">
+              <option>Hair mask</option><option>Deep conditioner</option><option>Hair oil</option><option>Hair serum</option>
+              <option>Scalp treatment</option><option>Scalp scrub</option><option>Scalp oil</option><option>Hair gloss</option>
+              <option>Bond treatment</option><option>Protein treatment</option><option>Leave-in conditioner</option>
+            </optgroup>
+            <optgroup class="hc-opts" label="— Styling —">
+              <option>Heat protectant</option><option>Hair spray</option><option>Mousse</option><option>Curl cream</option>
+              <option>Gel</option><option>Pomade</option><option>Wax</option><option>Texturising spray</option>
+              <option>Volume spray</option><option>Anti-frizz serum</option><option>Hair primer</option>
+            </optgroup>
+            <optgroup class="hc-opts" label="— Colour —">
+              <option>Hair dye</option><option>Root touch-up</option><option>Toner</option><option>Colour gloss</option>
+              <option>Colour-protecting shampoo</option><option>Colour-protecting conditioner</option>
+            </optgroup>
+            <optgroup class="hc-opts" label="— Tools & Accessories —">
+              <option>Hair tool</option><option>Hair brush</option><option>Comb</option><option>Hair clip</option>
             </optgroup>
             <optgroup label="— Nails —">
               <option>Nail polish</option><option>Gel polish</option><option>Nail treatment</option><option>Cuticle oil</option>
@@ -854,10 +868,6 @@ const COLORS=[
   {n:'Peacock',h:'linear-gradient(135deg,#004D40,#006064,#1565C0,#4A148C)'},{n:'Lava',h:'linear-gradient(135deg,#FF4500,#FF8C00,#FFD700,#DC143C)'},
 ];
 
-const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Cream cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing water','Cleansing milk','Double cleanse oil','Makeup remover','Eye makeup remover','Cleansing wipes','Toner','Hydrating toner','Exfoliating toner','Astringent toner','Essence','Facial mist','Thermal water spray','Serum','Vitamin C serum','Retinol','Retinoid','Tretinoin','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','PHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Tranexamic acid','Alpha arbutin','Ceramide serum','Centella serum','Snail mucin','Brightening serum','Anti-aging serum','Dark spot serum','Ampoule','Booster','Facial oil treatment','Moisturiser','Gel moisturiser','Cream moisturiser','Lotion','Rich cream','Barrier cream','Water cream','Gel-cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Eye oil','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Lip balm SPF','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Peeling solution','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Peel-off mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','Eye mask','Neck mask','SPF / Sunscreen','SPF moisturiser','SPF serum','Mineral sunscreen','Chemical sunscreen','Hybrid sunscreen','Tinted SPF','SPF mist','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Scar treatment','Rosacea treatment','Neck cream','Hand cream','Cuticle treatment','Collagen supplement','Skin supplement','Vitamin','Probiotic','Gummy supplement'];
-const SKINCARE_STEP_MAP={'Cleanser':'Cleanse','Gel cleanser':'Cleanse','Foam cleanser':'Cleanse','Cream cleanser':'Cleanse','Oil cleanser':'Cleanse','Balm cleanser':'Cleanse','Micellar water':'Cleanse','Cleansing water':'Cleanse','Cleansing milk':'Cleanse','Double cleanse oil':'Cleanse','Makeup remover':'Cleanse','Eye makeup remover':'Cleanse','Cleansing wipes':'Cleanse','Toner':'Tone & Prep','Hydrating toner':'Tone & Prep','Exfoliating toner':'Tone & Prep','Astringent toner':'Tone & Prep','Essence':'Tone & Prep','Facial mist':'Tone & Prep','Thermal water spray':'Tone & Prep','Serum':'Treat','Vitamin C serum':'Treat','Retinol':'Treat','Retinoid':'Treat','Tretinoin':'Treat','Bakuchiol':'Treat','Niacinamide':'Treat','Hyaluronic acid':'Treat','Peptide serum':'Treat','AHA serum':'Treat','BHA serum':'Treat','PHA serum':'Treat','Azelaic acid':'Treat','Salicylic acid':'Treat','Glycolic acid':'Treat','Lactic acid':'Treat','Tranexamic acid':'Treat','Alpha arbutin':'Treat','Ceramide serum':'Treat','Centella serum':'Treat','Snail mucin':'Treat','Brightening serum':'Treat','Anti-aging serum':'Treat','Dark spot serum':'Treat','Ampoule':'Treat','Booster':'Treat','Facial oil treatment':'Treat','Moisturiser':'Moisturise','Gel moisturiser':'Moisturise','Cream moisturiser':'Moisturise','Lotion':'Moisturise','Rich cream':'Moisturise','Barrier cream':'Moisturise','Water cream':'Moisturise','Gel-cream':'Moisturise','Night cream':'Moisturise','Sleeping mask':'Moisturise','Face oil':'Moisturise','Facial balm':'Moisturise','Eye cream':'Eyes & Lips','Eye gel':'Eyes & Lips','Eye serum':'Eyes & Lips','Eye oil':'Eyes & Lips','Under-eye patches':'Eyes & Lips','Lip treatment':'Eyes & Lips','Lip serum':'Eyes & Lips','Lip mask':'Eyes & Lips','Lip scrub':'Eyes & Lips','Lip balm SPF':'Eyes & Lips','Exfoliator':'Exfoliate','Physical scrub':'Exfoliate','Chemical exfoliant':'Exfoliate','Enzyme exfoliant':'Exfoliate','Peeling gel':'Exfoliate','Peeling solution':'Exfoliate','Gommage':'Exfoliate','Face mask':'Masks','Sheet mask':'Masks','Clay mask':'Masks','Mud mask':'Masks','Peel-off mask':'Masks','Overnight mask':'Masks','Hydrating mask':'Masks','Brightening mask':'Masks','Charcoal mask':'Masks','Eye mask':'Masks','Neck mask':'Masks','SPF / Sunscreen':'SPF & Sun','SPF moisturiser':'SPF & Sun','SPF serum':'SPF & Sun','Mineral sunscreen':'SPF & Sun','Chemical sunscreen':'SPF & Sun','Hybrid sunscreen':'SPF & Sun','Tinted SPF':'SPF & Sun','SPF mist':'SPF & Sun','After-sun':'SPF & Sun','Spot treatment':'Targeted','Pimple patch':'Targeted','Acne treatment':'Targeted','Hyperpigmentation treatment':'Targeted','Scar treatment':'Targeted','Rosacea treatment':'Targeted','Neck cream':'Targeted','Hand cream':'Targeted','Cuticle treatment':'Targeted','Collagen supplement':'Supplements','Skin supplement':'Supplements','Vitamin':'Supplements','Probiotic':'Supplements','Gummy supplement':'Supplements'};
-const SKINCARE_STEPS=['Cleanse','Tone & Prep','Treat','Moisturise','Eyes & Lips','SPF & Sun','Exfoliate','Masks','Targeted','Supplements'];
-const STEP_ICONS={'Cleanse':'🧼','Tone & Prep':'💧','Treat':'⚗️','Moisturise':'🫧','Eyes & Lips':'👁️','SPF & Sun':'☀️','Exfoliate':'✨','Masks':'🎭','Targeted':'🎯','Supplements':'💊'};
 let items=[],looks=[],wishlist=[],cats=[],routines=[];
 let view='all',gmode='grid';
 let eItemId=null,vItemId=null,eLookId=null,eCatId=null,eRoutineId=null,vRoutineId=null;
@@ -875,20 +885,106 @@ function cm(id){g(id).style.display='none';}
 function setSyncDot(s){const d=g('sync-dot');if(!d)return;d.className='sdot'+(s==='syncing'?' sy':s==='error'?' er':'');}
 function getPhotos(col,id){try{return JSON.parse(localStorage.getItem('mph_'+col+'_'+id)||'[]');}catch{return[];}}
 
+const HAIRCARE_TYPES=['Hair mask','Hair oil','Scalp treatment','Dry shampoo','Shampoo','Conditioner','Co-wash','Clarifying shampoo','2-in-1 shampoo','Deep conditioner','Hair serum','Scalp scrub','Scalp oil','Hair gloss','Bond treatment','Protein treatment','Leave-in conditioner','Heat protectant','Hair spray','Mousse','Curl cream','Gel','Pomade','Wax','Texturising spray','Volume spray','Anti-frizz serum','Hair primer','Hair dye','Root touch-up','Toner','Colour gloss','Colour-protecting shampoo','Colour-protecting conditioner','Hair tool','Hair brush','Comb','Hair clip'];
+
+const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing milk','Makeup remover','Eye makeup remover','Toner','Hydrating toner','Exfoliating toner','Essence','Facial mist','Serum','Vitamin C serum','Retinol','Retinoid','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Alpha arbutin','Ceramide serum','Snail mucin','Brightening serum','Dark spot serum','Ampoule','Booster','Moisturiser','Gel moisturiser','Rich cream','Barrier cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','SPF / Sunscreen','SPF moisturiser','Mineral sunscreen','Chemical sunscreen','Tinted SPF','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Neck cream','Hand cream','Collagen supplement','Skin supplement','Probiotic','Gummy supplement'];
+
 function updateBadges(){
-  // Pull latest data written by the Firebase module
-  if(window._items!==undefined)items=window._items;
-  if(window._looks!==undefined)looks=window._looks;
-  if(window._wishlist!==undefined)wishlist=window._wishlist;
-  if(window._cats!==undefined)cats=window._cats;
   const s=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
-  s('b-all',items.length);s('b-skincare',items.filter(i=>SKINCARE_TYPES.includes(i.type)).length);s('b-favs',items.filter(i=>i.favourite).length);
+  s('b-all',items.length);
+  s('b-skincare',items.filter(i=>SKINCARE_TYPES.includes(i.type)).length);
+  s('b-haircare',items.filter(i=>HAIRCARE_TYPES.includes(i.type)).length);
+  s('b-favs',items.filter(i=>i.favourite).length);
   s('b-wish',wishlist.length);s('b-looks',looks.length);
   s('db-stat',items.length+' product'+(items.length!==1?'s':'')+' · synced');
   setSyncDot('ok');
 }
-window.updateBadges=updateBadges;
-window.renderCurrent=function(){renderCurrent();};
+
+function rFavs(){
+  const favs=items.filter(i=>i.favourite);
+  const makeup=favs.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  const skincare=favs.filter(i=>SKINCARE_TYPES.includes(i.type));
+  const haircare=favs.filter(i=>HAIRCARE_TYPES.includes(i.type));
+  sCH(`<div class="ch"><div class="cht">Favourites</div><div class="chs">${favs.length} favourite${favs.length!==1?'s':''}</div></div>`);
+  sFB('');
+  if(!favs.length){sCt(`<div class="empty"><div class="ei">⭐</div><p>Star products in Makeup, Skincare or Haircare to see them here!</p></div>`);return;}
+  function section(title,icon,list){
+    if(!list.length)return'';
+    return`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:18px">${icon}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${title}</span>
+        <span style="font-size:10px;color:var(--text3)">(${list.length})</span>
+      </div>
+      <div class="grid">${list.map(iCard).join('')}</div>
+    </div>`;
+  }
+  sCt(section('Makeup','💄',makeup)+section('Skincare','🧴',skincare)+section('Haircare','💇',haircare));
+}
+
+function rHaircare(){
+  const hc=items.filter(i=>HAIRCARE_TYPES.includes(i.type));
+  const sr=gv('hcsrch').toLowerCase(),cf=gv('hccat'),tf=gv('hctyp'),sf=gv('hcstk'),so=gv('hcsort')||'name';
+  let list=hc.filter(i=>{
+    if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
+    if(cf&&i.category!==cf)return false;
+    if(tf&&i.type!==tf)return false;
+    if(sf&&i.stock!==sf)return false;
+    return true;
+  });
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  list.sort(fns[so]||fns.name);
+  const types=[...new Set(hc.map(i=>i.type).filter(Boolean))].sort();
+  const total=hc.length;
+  sCH(`<div class="ch"><div class="cht">Haircare</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb">
+    <div class="fbs"><input type="text" id="hcsrch" placeholder="Search haircare..." value="${sr.replace(/"/g,'&quot;')}" oninput="rHaircare()"></div>
+    <select class="fs" id="hctyp" onchange="rHaircare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
+    <select class="fs" id="hccat" onchange="rHaircare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+    <select class="fs" id="hcstk" onchange="rHaircare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select class="fs" id="hcsort" onchange="rHaircare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="vt">
+      <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
+      <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
+    </div>
+    <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
+  </div>`);
+  if(!hc.length){sCt(`<div class="empty"><div class="ei">💇</div><p>No haircare yet — click + Add to get started!</p></div>`);return;}
+  if(!list.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>`);return;}
+  sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+}
+
+function rSkincare(){
+  const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type));
+  const sr=gv('scsrch').toLowerCase(),cf=gv('sccat'),tf=gv('sctyp'),sf=gv('scstk'),so=gv('scsort')||'name';
+  let list=sc.filter(i=>{
+    if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
+    if(cf&&i.category!==cf)return false;
+    if(tf&&i.type!==tf)return false;
+    if(sf&&i.stock!==sf)return false;
+    return true;
+  });
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  list.sort(fns[so]||fns.name);
+  const types=[...new Set(sc.map(i=>i.type).filter(Boolean))].sort();
+  const total=sc.length;
+  sCH(`<div class="ch"><div class="cht">Skincare</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb">
+    <div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." value="${sr.replace(/"/g,'&quot;')}" oninput="rSkincare()"></div>
+    <select class="fs" id="sctyp" onchange="rSkincare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
+    <select class="fs" id="sccat" onchange="rSkincare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+    <select class="fs" id="scstk" onchange="rSkincare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select class="fs" id="scsort" onchange="rSkincare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="vt">
+      <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
+      <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
+    </div>
+    <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
+  </div>`);
+  if(!sc.length){sCt(`<div class="empty"><div class="ei">🧴</div><p>No skincare yet — click + Add to get started!</p></div>`);return;}
+  if(!list.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>`);return;}
+  sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+}
 
 async function persist(col,item){if(window.fbSave)await window.fbSave(col,item);}
 async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
@@ -902,14 +998,14 @@ function nav(v){
 }
 function renderCurrent(){
   if(view==='all')rItems(false);
-  else if(view==='favs')rItems(true);
+  else if(view==='skincare')rSkincare();
+  else if(view==='haircare')rHaircare();
+  else if(view==='favs')rFavs();
   else if(view==='wishlist')rWishlist();
   else if(view==='looks')rLooks();
   else if(view==='routines')rRoutines();
   else if(view==='compare')rCompare();
   else if(view==='expiry')rExpiry();
-  else if(view==='skincare')rSkincare();
-  else if(view==='skincare-stats')rSkincareStats();
   else if(view==='stats')rStats();
   else if(view==='settings')rSettings();
 }
@@ -924,7 +1020,10 @@ function sCt(h){g('content').innerHTML=h;}
 function rItems(favsOnly=false){
   const title=favsOnly?'Favourites':'All makeup';
   const sr=gv('isrch').toLowerCase(),cf=gv('fcat'),tf=gv('ftyp'),sf=gv('fstk'),so=gv('fsort')||'name';
+  // Exclude skincare types from makeup view
   let list=items.filter(i=>{
+    if(SKINCARE_TYPES.includes(i.type))return false;
+    if(HAIRCARE_TYPES.includes(i.type))return false;
     if(favsOnly&&!i.favourite)return false;
     if(sr&&![i.name,i.brand||'',i.shade||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
     if(cf&&i.category!==cf)return false;
@@ -934,9 +1033,10 @@ function rItems(favsOnly=false){
   });
   const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
   list.sort(fns[so]||fns.name);
-  const types=[...new Set(items.map(i=>i.type).filter(Boolean))].sort();
-  const stocks=[...new Set(items.map(i=>i.stock).filter(Boolean))].sort();
-  sCH(`<div class="ch"><div class="cht">${title}</div><div class="chs">${list.length} of ${favsOnly?items.filter(i=>i.favourite).length:items.length} product${items.length!==1?'s':''}</div></div>`);
+  const makeupItems=items.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  const types=[...new Set(makeupItems.map(i=>i.type).filter(Boolean))].sort();
+  const total=favsOnly?makeupItems.filter(i=>i.favourite).length:makeupItems.length;
+  sCH(`<div class="ch"><div class="cht">${title}</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
     <div class="fbs"><input type="text" id="isrch" placeholder="Search products..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems(${favsOnly})"></div>
     <select class="fs" id="ftyp" onchange="rItems(${favsOnly})"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
@@ -949,7 +1049,7 @@ function rItems(favsOnly=false){
     </div>
     <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
   </div>`);
-  if(!list.length){sCt(`<div class="empty"><div class="ei">${favsOnly?'⭐':'💄'}</div><p>${items.length?'No products match.':favsOnly?'Star products to see them here!':'Add your first makeup product!'}</p></div>`);return;}
+  if(!list.length){sCt(`<div class="empty"><div class="ei">${favsOnly?'⭐':'💄'}</div><p>${makeupItems.length?'No products match.':favsOnly?'Star products to see them here!':'Add your first makeup product!'}</p></div>`);return;}
   sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
 }
 function setGM(m){gmode=m;renderCurrent();}
@@ -1004,6 +1104,21 @@ function openDetail(id){
 function editItem(){cm('detail-modal');openAddItem(vItemId);}
 
 // ── ITEM FORM ────────────────────────────────────────────────────────────────
+function setTypeMode(mode){
+  // mode: 'makeup', 'skincare', 'haircare'
+  document.querySelectorAll('#f-type optgroup').forEach(og=>{
+    const isSC=og.classList.contains('sc-opts');
+    const isHC=og.classList.contains('hc-opts');
+    if(mode==='skincare') og.style.display=isSC?'':'none';
+    else if(mode==='haircare') og.style.display=isHC?'':'none';
+    else og.style.display=(isSC||isHC)?'none':'';
+  });
+  const sel=g('f-type');
+  if(mode==='skincare') sel.value='Cleanser';
+  else if(mode==='haircare') sel.value='Shampoo';
+  else sel.value='Foundation';
+}
+
 function openAddItem(id=null){
   eItemId=id;vItemId=id||vItemId;
   const item=id?items.find(i=>i.id===id):null;
@@ -1015,6 +1130,11 @@ function openAddItem(id=null){
   v('f-formula',item?.formula);v('f-price',item?.price);v('f-pdate',item?.purchaseDate);
   v('f-expiry',item?.expiry);v('f-skin',item?.skin);v('f-store',item?.store);
   v('f-tags',(item?.tags||[]).join(', '));v('f-notes',item?.notes);
+  // Set mode based on current view or item type
+  const isSkincareItem=item&&SKINCARE_TYPES.includes(item.type);
+  const isHaircareItem=item&&HAIRCARE_TYPES.includes(item.type);
+  const mode=isSkincareItem||view==='skincare'?'skincare':isHaircareItem||view==='haircare'?'haircare':'makeup';
+  setTypeMode(mode);
   if(item?.type)g('f-type').value=item.type;
   if(item?.category)g('f-cat').value=item.category;
   if(item?.finish)g('f-finish').value=item.finish||'';
@@ -1332,82 +1452,56 @@ function rCompare(){
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────
-
-// ── SKINCARE ──────────────────────────────────────────────────────────────────
-function rSkincare(){
-  const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type));
-  const sr=gv('scsrch').toLowerCase(),tf=gv('scstep'),so=gv('scsort')||'name';
-  const sortFns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
-  const filtered=sc.filter(i=>{
-    if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
-    if(tf&&SKINCARE_STEP_MAP[i.type]!==tf)return false;
-    return true;
-  }).sort(sortFns[so]||sortFns.name);
-  sCH('<div class="ch"><div class="cht">Skincare</div><div class="chs">'+sc.length+' skincare product'+(sc.length!==1?'s':'')+' in your collection</div></div>');
-  sFB('<div class="fb"><div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." oninput="rSkincare()" value="'+sr+'"></div><select class="fs" id="scstep" onchange="rSkincare()"><option value="">All steps</option>'+SKINCARE_STEPS.map(s=>'<option value="'+s+'"'+(tf===s?' selected':'')+'>'+(STEP_ICONS[s]||'')+' '+s+'</option>').join('')+'</select><select class="fs" id="scsort" onchange="rSkincare()"><option value="name">A–Z</option><option value="brand">Brand</option><option value="type">Type</option><option value="newest">Newest</option><option value="expiry">Expiry</option></select><div class="vt"><button class="vb '+(gmode==='grid'?'active':'')+'" onclick="gmode='grid';rSkincare()">⊞</button><button class="vb '+(gmode==='list'?'active':'')+'" onclick="gmode='list';rSkincare()">☰</button></div><button class="btn sm pr" onclick="openAddItem()" style="margin-left:auto">+ Add skincare</button></div>');
-  if(!sc.length){sCt('<div class="empty"><div class="ei">🧴</div><p>No skincare products yet — add your first one!</p></div>');return;}
-  if(!filtered.length){sCt('<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>');return;}
-  if(!tf&&!sr){
-    const grouped={};SKINCARE_STEPS.forEach(s=>{grouped[s]=[];});
-    filtered.forEach(i=>{const step=SKINCARE_STEP_MAP[i.type]||'Targeted';if(grouped[step])grouped[step].push(i);});
-    let html='';
-    SKINCARE_STEPS.forEach(step=>{
-      if(!grouped[step]||!grouped[step].length)return;
-      html+='<div style="margin-bottom:20px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">'+(STEP_ICONS[step]||'🧴')+'</span><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">'+step+'</span><span style="font-size:10px;color:var(--text3)">('+grouped[step].length+')</span></div><div class="'+(gmode==='grid'?'grid':'')+'">'+(gmode==='grid'?grouped[step].map(i=>iCard(i)).join(''):grouped[step].map(i=>iLR(i)).join(''))+'</div></div>';
-    });
-    sCt(html);
-  } else {
-    sCt('<div class="'+(gmode==='grid'?'grid':'')+'">'+(gmode==='grid'?filtered.map(i=>iCard(i)).join(''):filtered.map(i=>iLR(i)).join(''))+'</div>');
-  }
-}
-
-function rSkincareStats(){
-  const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type));
-  sCH('<div class="ch"><div class="cht">Skincare insights</div><div class="chs">A deep dive into your skincare</div></div>');sFB('');
-  if(!sc.length){sCt('<div class="empty"><div class="ei">🫧</div><p>Add skincare products to see insights.</p></div>');return;}
-  const byStep=SKINCARE_STEPS.reduce((acc,s)=>{acc[s]=sc.filter(i=>SKINCARE_STEP_MAP[i.type]===s).length;return acc;},{});
-  const byBrand=sc.reduce((acc,i)=>{const k=i.brand||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
-  const byType=sc.reduce((acc,i)=>{const k=i.type||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
-  const byRating=sc.reduce((acc,i)=>{if(i.rating){acc[i.rating]=(acc[i.rating]||0)+1;}return acc;},{});
-  const byStock=sc.reduce((acc,i)=>{const k=i.stock||'Unknown';acc[k]=(acc[k]||0)+1;return acc;},{});
-  const favs=sc.filter(i=>i.favourite).length;
-  const prices=sc.map(i=>parseFloat((i.price||'').replace(/[^0-9.]/g,'')||0)).filter(p=>p>0);
-  const total=prices.reduce((a,b)=>a+b,0);
-  const sym=(sc.find(i=>i.price)||{price:'£'}).price.replace(/[\d.,\s]/g,'')||'£';
-  const lowStock=sc.filter(i=>i.stock==='Low'||i.stock==='Empty').length;
-  const actives=['Retinol','Retinoid','Tretinoin','Bakuchiol','Niacinamide','Vitamin C serum','Peptide serum','AHA serum','BHA serum','PHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Tranexamic acid','Alpha arbutin','Ceramide serum','Centella serum','Snail mucin'];
-  const activeCount=sc.filter(i=>actives.includes(i.type)).length;
-  function chart(ti,obj,col){const s=Object.entries(obj).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);if(!s.length)return'';const mx=Math.max(...s.map(x=>x[1]),1);return'<div class="cb"><div class="ct">'+ti+'</div>'+s.map(([k,v])=>'<div class="br"><div class="bl">'+k+'</div><div class="bt"><div class="bf" style="width:'+Math.round(v/mx*100)+'%;background:'+col+'"></div></div><div class="bc">'+v+'</div></div>').join('')+'</div>';}
-  const essentialSteps=['Cleanse','Moisturise','SPF & Sun'];
-  const score=Math.round(essentialSteps.filter(s=>byStep[s]>0).length/essentialSteps.length*100);
-  const scoreCol=score===100?'#3b6d11':score>=66?'#854f0b':'#a32d2d';
-  const expired=sc.filter(i=>i.expiry&&expiryStatus(i.expiry)&&expiryStatus(i.expiry).cls==='exp-expired').length;
-  const expSoon=sc.filter(i=>i.expiry&&expiryStatus(i.expiry)&&expiryStatus(i.expiry).cls==='exp-soon').length;
-  sCt(
-    '<div class="sw2">'+[['Skincare',sc.length],['Favourites',favs],['Actives',activeCount],['Low/empty',lowStock],(expired||expSoon)?['Expiring',expired+expSoon]:null,prices.length?['Total spent',sym+Math.round(total)]:null].filter(Boolean).map(([l,v])=>'<div class="stb"><div class="stl">'+l+'</div><div class="stv">'+v+'</div></div>').join('')+'</div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">🛡️ Routine completeness</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="flex:1;height:10px;background:var(--bg3);border-radius:99px;overflow:hidden"><div style="width:'+score+'%;height:100%;background:'+scoreCol+';border-radius:99px"></div></div><span style="font-size:13px;font-weight:700;color:'+scoreCol+'">'+score+'%</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">'+essentialSteps.map(s=>'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(byStep[s]>0?'#eaf3de':'var(--bg3)')+';color:'+(byStep[s]>0?'#3b6d11':'var(--text3)')+';font-weight:600">'+(byStep[s]>0?'✓ ':'')+s+'</span>').join('')+'</div></div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">📋 By routine step</div>'+SKINCARE_STEPS.map(step=>{const count=byStep[step]||0;const mx=Math.max(...Object.values(byStep),1);return'<div class="br"><div class="bl">'+(STEP_ICONS[step]||'')+' '+step+'</div><div class="bt"><div class="bf" style="width:'+(count?Math.max(Math.round(count/mx*100),4):0)+'%;background:#00796B"></div></div><div class="bc">'+count+'</div></div>';}).join('')+'</div>'+
-    '<div class="charts">'+chart('By brand',byBrand,'#7B1FA2')+chart('By type',byType,'#0047AB')+chart('By rating',byRating,'#C9A72A')+chart('By stock',byStock,'#C66E3A')+'</div>'+
-    '<div class="cb" style="margin-bottom:10px"><div class="ct">⚗️ Active ingredients</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+actives.map(a=>{const has=sc.some(i=>i.type===a);return'<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:'+(has?'#e8eaf6':'var(--bg3)')+';color:'+(has?'#3f0099':'var(--text3)')+';font-weight:'+(has?600:400)+'">'+(has?'✓ ':'')+a.replace(' serum','').replace(' acid','')+'</span>';}).join('')+'</div></div>'
-  );
-}
-
 let _tt;
 function showToast(msg){const el=g('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ov').forEach(o=>o.style.display='none');closeMore();}});
 
-// Force render once data arrives — polls every 500ms for up to 30s
-(function waitForData(){
-  let attempts=0;
-  const check=()=>{
-    if(window._items!==undefined&&window._looks!==undefined&&window._wishlist!==undefined&&window._cats!==undefined){
-      updateBadges();renderCurrent();
-    } else if(attempts++<60){
-      setTimeout(check,500);
-    }
-  };
-  setTimeout(check,500);
-})();
+// ── CLOUDINARY PHOTO UPLOAD ──────────────────────────────────────────────────
+const CL_CLOUD='dirakuvhp',CL_PRESET='wardrobe',CL_URL='https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/image/upload';
+
+async function uploadPhoto(file){
+  const blob=await new Promise((res,rej)=>{
+    const rd=new FileReader();rd.onerror=rej;
+    rd.onload=e=>{
+      const img=new Image();
+      img.onerror=()=>res(file);
+      img.onload=()=>{
+        const MAX=1200;let w=img.width,h=img.height;
+        if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+        if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        c.toBlob(b=>res(b||file),'image/jpeg',.82);
+      };
+      img.src=e.target.result;
+    };
+    rd.readAsDataURL(file);
+  });
+  const fd=new FormData();
+  fd.append('file',blob);
+  fd.append('upload_preset',CL_PRESET);
+  fd.append('folder','makeup');
+  try{
+    const r=await fetch(CL_URL,{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.secure_url)return d.secure_url;
+    throw new Error(d.error?.message||'Upload failed');
+  }catch(e){
+    console.error('Upload error:',e);
+    showToast('Photo upload failed');
+    return null;
+  }
+}
+
+async function uploadPhotos(files){
+  if(!files.length)return[];
+  showToast('Uploading photo'+(files.length>1?'s':'')+'...');
+  const urls=[];
+  for(const f of files){const u=await uploadPhoto(f);if(u)urls.push(u);}
+  if(urls.length)showToast('Photo'+(urls.length>1?'s':'')+' uploaded!');
+  return urls;
+}
+
 </script>
 </body>
 </html>
