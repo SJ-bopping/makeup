@@ -780,7 +780,23 @@ function om(id){g(id).style.display='flex';}
 function cm(id){g(id).style.display='none';}
 
 function setSyncDot(s){const d=g('sync-dot');if(!d)return;d.className='sdot'+(s==='syncing'?' sy':s==='error'?' er':'');}
-function getPhotos(col,id){try{return JSON.parse(localStorage.getItem('mph_'+col+'_'+id)||'[]');}catch{return[];}}
+const CLOUDINARY_CLOUD='dirakuvhp';
+const CLOUDINARY_PRESET='makeup';
+
+async function uploadToCloudinary(dataUrl){
+  const blob=await(await fetch(dataUrl)).blob();
+  const fd=new FormData();fd.append('file',blob);fd.append('upload_preset',CLOUDINARY_PRESET);
+  const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});
+  const data=await res.json();
+  return data.secure_url;
+}
+
+function getPhotos(col,id){
+  // Photos now stored as Cloudinary URLs on the item itself
+  const arr=col==='items'?items:col==='looks'?looks:[];
+  const obj=arr.find(x=>x.id===id);
+  return obj?.photoUrls||[];
+}
 
 const HAIRCARE_TYPES=['Hair mask','Hair oil','Scalp treatment','Dry shampoo','Shampoo','Conditioner','Co-wash','Clarifying shampoo','2-in-1 shampoo','Deep conditioner','Hair serum','Scalp scrub','Scalp oil','Hair gloss','Bond treatment','Protein treatment','Leave-in conditioner','Heat protectant','Hair spray','Mousse','Curl cream','Gel','Pomade','Wax','Texturising spray','Volume spray','Anti-frizz serum','Hair primer','Hair dye','Root touch-up','Toner','Colour gloss','Colour-protecting shampoo','Colour-protecting conditioner','Hair tool','Hair brush','Comb','Hair clip'];
 
@@ -1058,7 +1074,7 @@ function openAddItem(id=null){
   if(item?.rating)g('f-rating').value=item.rating||'';
   g('f-fav').checked=!!(item?.favourite);
   piPhotos=[];piCover=0;g('f-photo').value='';g('fpp').innerHTML='';
-  if(item){const saved=getPhotos('items',id);piPhotos=[...saved];piCover=item.coverIndex||0;renderIPP();}
+  if(item){piPhotos=[...(item.photoUrls||[])];piCover=0;renderIPP();}
   bCP(item?.color||null);om('item-modal');
 }
 
@@ -1085,7 +1101,18 @@ function bCP(sel){
 function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
-async function prevIP(inp){const files=Array.from(inp.files);for(const f of files){piPhotos.push(await f2b(f));}inp.value='';if(piCover>=piPhotos.length)piCover=0;renderIPP();}
+async function prevIP(inp){
+  const files=Array.from(inp.files);
+  g('fpp').innerHTML='<div style="padding:8px;font-size:12px;color:var(--text3)">Uploading...</div>';
+  for(const f of files){
+    try{
+      const dataUrl=await f2b(f);
+      const url=await uploadToCloudinary(dataUrl);
+      piPhotos.push(url);
+    }catch(e){showToast('Upload failed');}
+  }
+  inp.value='';if(piCover>=piPhotos.length)piCover=0;renderIPP();
+}
 function renderIPP(){
   const el=g('fpp');
   if(!piPhotos.length){el.innerHTML='';return;}
@@ -1101,9 +1128,9 @@ function saveItem(){
   const orig=eItemId?items.find(i=>i.id===eItemId):null;
   const orderedPhotos=[...piPhotos];
   if(piCover>0&&piCover<orderedPhotos.length){orderedPhotos.unshift(orderedPhotos.splice(piCover,1)[0]);}
-  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photos:[...orderedPhotos],photo:orderedPhotos[0]||null,coverIndex:0,addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
+  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
-  if(item.photos.length)localStorage.setItem('mph_items_'+item.id,JSON.stringify(item.photos));
+  // photos stored as Cloudinary URLs on item.photoUrls — saved to Firestore via persist()
   const wasEditing=eItemId;cm('item-modal');updateBadges();renderCurrent();
   showToast(wasEditing?'Product updated ✓':'Product added ✓');
   persist('items',item);
@@ -1111,7 +1138,7 @@ function saveItem(){
 
 function delItem(){
   const id=vItemId||eItemId;if(!id||!confirm('Delete this product?'))return;
-  items=items.filter(i=>i.id!==id);localStorage.removeItem('mph_items_'+id);
+  items=items.filter(i=>i.id!==id);
   cm('detail-modal');cm('item-modal');vItemId=null;eItemId=null;
   updateBadges();renderCurrent();showToast('Deleted');persistDel('items',id);
 }
@@ -1138,8 +1165,19 @@ function rLooks(){
 }
 
 function openAddLook(){eLookId=null;selLookItems=new Set();plPhotos=[];g('lmt').textContent='Add look';g('ldel').style.display='none';['lf-name','lf-notes'].forEach(id=>g(id).value='');g('lf-date').value=new Date().toISOString().split('T')[0];g('lf-occ').value='';g('lf-photo').value='';g('lpp').innerHTML='';buildLookPicker();om('look-modal');}
-function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';const ph=getPhotos('looks',id);g('lpp').innerHTML=ph.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${ph.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px">`).join('')}</div>`:'';buildLookPicker();om('look-modal');}
-async function prevLP(inp){const files=Array.from(inp.files);for(const f of files){plPhotos.push(await f2b(f));}inp.value='';renderLPP();}
+function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';const ph=l.photoUrls||[];g('lpp').innerHTML=ph.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${ph.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px">`).join('')}</div>`:'';buildLookPicker();om('look-modal');}
+async function prevLP(inp){
+  const files=Array.from(inp.files);
+  g('lpp').innerHTML='<div style="padding:8px;font-size:12px;color:var(--text3)">Uploading...</div>';
+  for(const f of files){
+    try{
+      const dataUrl=await f2b(f);
+      const url=await uploadToCloudinary(dataUrl);
+      plPhotos.push(url);
+    }catch(e){showToast('Upload failed');}
+  }
+  inp.value='';renderLPP();
+}
 function renderLPP(){const el=g('lpp');if(!plPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${plPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="plPhotos.splice(${i},1);renderLPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
 function buildLookPicker(){const el=g('lpick');if(!items.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add products first.</span>';return;}el.innerHTML=[...items].sort((a,b)=>a.name.localeCompare(b.name)).map(item=>`<span class="chip ${selLookItems.has(item.id)?'on':''}" onclick="togLI('${item.id}',this)">${(cats.find(c=>c.id===item.category)||{icon:''}).icon||''} ${item.name}</span>`).join('');}
 function togLI(id,el){if(selLookItems.has(id)){selLookItems.delete(id);el.classList.remove('on');}else{selLookItems.add(id);el.classList.add('on');}}
@@ -1147,13 +1185,13 @@ function togLI(id,el){if(selLookItems.has(id)){selLookItems.delete(id);el.classL
 function saveLook(){
   const name=gv('lf-name').trim();if(!name){showToast('Please enter a name.');return;}
   const isNew=!eLookId;
-  const look={id:eLookId||mid(),name,items:[...selLookItems],date:gv('lf-date'),occasion:gv('lf-occ'),notes:gv('lf-notes').trim(),photos:[...plPhotos],photo:plPhotos[0]||null,createdAt:eLookId?(looks.find(l=>l.id===eLookId)||{}).createdAt||Date.now():Date.now(),updatedAt:Date.now()};
+  const look={id:eLookId||mid(),name,items:[...selLookItems],date:gv('lf-date'),occasion:gv('lf-occ'),notes:gv('lf-notes').trim(),photoUrls:[...plPhotos],createdAt:eLookId?(looks.find(l=>l.id===eLookId)||{}).createdAt||Date.now():Date.now(),updatedAt:Date.now()};
   if(eLookId)looks=looks.map(l=>l.id===eLookId?look:l);else looks.push(look);
-  if(look.photos.length)localStorage.setItem('mph_looks_'+look.id,JSON.stringify(look.photos));
+  // look photos stored as Cloudinary URLs on look.photoUrls
   cm('look-modal');updateBadges();renderCurrent();
   showToast(isNew?'Look saved ✓':'Look updated ✓');persist('looks',look);
 }
-function delLook(){if(!eLookId||!confirm('Delete this look?'))return;const id=eLookId;looks=looks.filter(l=>l.id!==id);localStorage.removeItem('mph_looks_'+id);cm('look-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('looks',id);}
+function delLook(){if(!eLookId||!confirm('Delete this look?'))return;const id=eLookId;looks=looks.filter(l=>l.id!==id);cm('look-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('looks',id);}
 
 // ── WISHLIST ──────────────────────────────────────────────────────────────────
 function rWishlist(){
