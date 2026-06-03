@@ -979,7 +979,7 @@ function expiryStatus(dateStr){
 function iCard(item){
   const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
   const cat=cats.find(c=>c.id===item.category)||{};
-  const photos=getPhotos('items',item.id);const fp=photos[0]||null;
+  const photos=item.photoUrls||[];const fp=photos[0]||null;
   const exp=expiryStatus(item.expiry);
   const swHtml=fp?`<div class="sw" style="padding:0"><img src="${fp}" alt=""><${photos.length>1?`span style="position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px">${photos.length}</span`:'span style="display:none">'}</span></div>`:`<div class="sw" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`;
   const tags=[];
@@ -994,7 +994,7 @@ function iCard(item){
 function iLR(item){
   const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
   const cat=cats.find(c=>c.id===item.category)||{};
-  const photos=getPhotos('items',item.id);const fp=photos[0]||null;
+  const photos=item.photoUrls||[];const fp=photos[0]||null;
   const thumb=fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`;
   return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 13px">${thumb}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||'—'}</div></div>${item.favourite?'<span style="font-size:14px;">⭐</span>':''}</div>`;
 }
@@ -1005,7 +1005,7 @@ function openDetail(id){
   const item=items.find(i=>i.id===id);if(!item)return;
   const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
   const cat=cats.find(c=>c.id===item.category)||{name:'—'};
-  const photos=getPhotos('items',id);
+  const photos=(items.find(i=>i.id===id)||{}).photoUrls||[];
   g('d-name').textContent=item.name;
   g('d-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:220px;':'height:120px;'}object-fit:cover">`).join('')}</div>`:'';
   const sw=g('d-swatch');sw.style.background=h;sw.style.color=fg;sw.textContent=cat.icon||'💄';
@@ -1151,7 +1151,7 @@ function rLooks(){
   const list=looks.filter(l=>!sr||l.name.toLowerCase().includes(sr)).sort((a,b)=>b.createdAt-a.createdAt);
   if(!list.length){sCt(`<div class="empty"><div class="ei">✨</div><p>${looks.length?'No looks match.':'Log your makeup looks here!'}</p></div>`);return;}
   sCt(`<div class="glg">${list.map(l=>{
-    const photos=getPhotos('looks',l.id);const fp=photos[0]||null;
+    const photos=l.photoUrls||[];const fp=photos[0]||null;
     const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
     return`<div class="pc" onclick="openEditLook('${l.id}')">
       <div class="pt">${fp?`<img src="${fp}" alt="">`:'✨'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
@@ -1230,7 +1230,7 @@ function rExpiry(){
   function exGroup(title,list,emoji){
     if(!list.length)return'';
     return`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">${emoji} ${title} (${list.length})</div>
-    <div style="display:flex;flex-direction:column;gap:6px">${list.map(item=>{const exp=expiryStatus(item.expiry);const photos=getPhotos('items',item.id);const fp=photos[0]||null;const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px">${fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${(cats.find(c=>c.id===item.category)||{icon:'💄'}).icon}</div>`}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${item.brand||'—'}</div></div><span class="exp-badge ${exp.cls}">${exp.label}</span></div>`;}).join('')}</div></div>`;
+    <div style="display:flex;flex-direction:column;gap:6px">${list.map(item=>{const exp=expiryStatus(item.expiry);const photos=item.photoUrls||[];const fp=photos[0]||null;const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px">${fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${(cats.find(c=>c.id===item.category)||{icon:'💄'}).icon}</div>`}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${item.brand||'—'}</div></div><span class="exp-badge ${exp.cls}">${exp.label}</span></div>`;}).join('')}</div></div>`;
   }
   sCt(exGroup('Expired',groups.expired,'⚠️')+exGroup('Expiring soon',groups.soon,'🟡')+exGroup('Good',groups.ok,'✅')+(noExpiry.length?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">⬜ No expiry date (${noExpiry.length})</div><div style="font-size:12px;color:var(--text3)">Add expiry dates to these products in Edit.</div></div>`:''));
 }
@@ -1348,7 +1348,7 @@ function openRoutineDetail(id){
     ${prods.length?`<div style="margin-bottom:14px">${prods.map((p,i)=>{
       const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
       const cat=cats.find(c=>c.id===p.category)||{};
-      const photos=getPhotos('items',p.id);const fp=photos[0]||null;
+      const photos=(p.photoUrls||[]);const fp=photos[0]||null;
       return`<div class="routine-step">
         <div class="step-num">${i+1}</div>
         ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${cat.icon||'💄'}</div>`}
@@ -1377,7 +1377,7 @@ function rCompare(){
     const fields=[['Type','type'],['Brand','brand'],['Shade','shade'],['Finish','finish'],['Formula','formula'],['Price','price'],['Stock','stock'],['Rating','rating'],['Skin type','skin'],['Store','store']];
     html+=`<div class="cmp-card" style="margin-bottom:14px">
       <div class="cmp-header" style="grid-template-columns:repeat(${cols},1fr)">
-        ${prods.map(p=>{const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};const photos=getPhotos('items',p.id);const fp=photos[0]||null;
+        ${prods.map(p=>{const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};const photos=(p.photoUrls||[]);const fp=photos[0]||null;
         return`<div class="cmp-col">
           ${fp?`<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:1px solid rgba(0,0,0,.08)"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div class="cmp-swatch" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`}
           <div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
@@ -1404,7 +1404,7 @@ function rCompare(){
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">${filtered.filter(i=>!cmpSel.includes(i.id)).slice(0,20).map(i=>{
       const h=hx(i.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===i.category)||{};
-      const photos=getPhotos('items',i.id);const fp=photos[0]||null;
+      const photos=(i.photoUrls||[]);const fp=photos[0]||null;
       return`<div class="card" onclick="cmpSel.push('${i.id}');rCompare()" style="display:flex;align-items:center;gap:12px;padding:10px 13px">
         ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`}
         <div style="flex:1;min-width:0"><div class="cn">${i.name}</div><div class="cs">${[i.brand,i.type].filter(Boolean).join(' · ')||'—'}</div></div>
