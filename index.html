@@ -635,7 +635,9 @@ const DEFAULT_CATS=[
 ];
 
 const COLORS=[
-  // ── Nudes & Skin Tones ──────────────────────────────────────────────────────
+  // ── Colourless ────────────────────────────────────────────────────────────────
+  {n:'Colourless',h:'linear-gradient(135deg,rgba(240,240,255,0.3),rgba(255,255,255,0.9))'},{n:'Clear',h:'linear-gradient(135deg,#e8f4ff,#ffffff)'},{n:'Translucent',h:'linear-gradient(135deg,#f0f0f0,#e8e8e8)'},{n:'Transparent',h:'linear-gradient(135deg,#ffffff,#f0f4f8)'},
+  // ── Nudes & Skin Tones ───────────────────────────────────────────────────────
   {n:'Clear/nude',h:'#F5E6D8'},{n:'Porcelain',h:'#F2E8E0'},{n:'Ivory',h:'#FFF8EE'},{n:'Alabaster',h:'#EDEADE'},
   {n:'Pearl',h:'#EAE0D5'},{n:'Vanilla',h:'#F3E5AB'},{n:'Linen',h:'#E8DCC8'},{n:'Cashmere',h:'#D9C4A8'},
   {n:'Nude',h:'#C19A6B'},{n:'Beige',h:'#D4B896'},{n:'Sand',h:'#C2A882'},{n:'Biscuit',h:'#D4A96A'},
@@ -766,7 +768,7 @@ const COLORS=[
 let items=[],looks=[],wishlist=[],cats=[],routines=[];
 let view='all',gmode='grid';
 let eItemId=null,vItemId=null,eLookId=null,eCatId=null,eRoutineId=null,vRoutineId=null;
-let selLookItems=new Set(),selRoutineItems=[],piPhotos=[],plPhotos=[];
+let selLookItems=new Set(),selRoutineItems=[],piPhotos=[],plPhotos=[],piCover=0;
 
 function mid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function isLight(h){if(!h||h.startsWith('linear'))return true;try{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000>155;}catch{return true;}}
@@ -1055,21 +1057,20 @@ function openAddItem(id=null){
   if(item?.stock)g('f-stock').value=item.stock||'Full';
   if(item?.rating)g('f-rating').value=item.rating||'';
   g('f-fav').checked=!!(item?.favourite);
-  piPhotos=[];g('f-photo').value='';g('fpp').innerHTML='';
+  piPhotos=[];piCover=0;g('f-photo').value='';g('fpp').innerHTML='';
+  if(item){const saved=getPhotos('items',id);piPhotos=[...saved];piCover=item.coverIndex||0;renderIPP();}
   bCP(item?.color||null);om('item-modal');
 }
 
 function bCP(sel){
   const groups={
-    'Nudes & Skin Tones':['Clear/nude','Porcelain','Ivory','Alabaster','Pearl','Vanilla','Linen','Cashmere','Nude','Beige','Sand','Biscuit','Buff','Wheat','Golden beige','Caramel','Chai','Tan','Honey','Amber','Toffee','Mushroom','Taupe','Greige','Stone','Pebble','Driftwood','Clay','Toasted','Praline','Almond','Hazelnut','Biscotti','Truffle','Fawn','Ecru','Raw silk','Warm nude','Cool nude','Pink nude','Sheer nude','Natural','Skin'],
-    'Pinks — Light':['Baby pink','Petal','Blush','Blush pink','Powder pink','Cotton candy','Ballet','Shell','Cameo','Peony','Tutu','Whisper','Fairy floss','Piglet','Ballerina','Rosewater','Foam','Mist pink'],
-    'Pinks — Mid':['Pink','Rose','Watermelon','Bubblegum','Flamingo','Carnation','Punch','Geranium','Strawberry','Neon pink','Electric pink','Vivid pink','Shocking pink','Candy pink','Melon pink'],
-    'Pinks — Deep':['Hot pink','Fuchsia','Magenta','Cerise','Dusty rose','Antique rose','Rosewood','Mauve rose','Cameo rose','Deep rose','Dried rose','Faded rose','Vintage rose','Tea rose'],
+    'Colourless':['Colourless','Clear','Translucent','Transparent'],
+    'Nudes & Skin Tones':['Clear/nude','Porcelain','Ivory','Alabaster','Pearl','Nude','Vanilla','Linen','Cashmere','Beige','Sand','Biscuit','Buff','Wheat','Golden beige','Caramel','Chai','Tan','Honey','Amber','Toffee','Mushroom','Taupe','Greige','Stone','Pebble','Driftwood','Clay','Toasted','Praline','Almond','Hazelnut','Biscotti','Truffle','Fawn','Ecru','Raw silk','Warm nude','Cool nude','Pink nude','Sheer nude','Natural','Skin'],
+    'Pinks & Mauves':['Baby pink','Petal','Blush','Cotton candy','Ballet','Shell','Cameo','Fairy floss','Piglet','Ballerina','Foam','Pink','Rose','Watermelon','Bubblegum','Flamingo','Carnation','Punch','Geranium','Strawberry','Neon pink','Electric pink','Vivid pink','Shocking pink','Candy pink','Melon pink','Hot pink','Fuchsia','Magenta','Cerise','Dusty rose','Antique rose','Rosewood','Mauve rose','Cameo rose','Deep rose','Dried rose','Faded rose','Vintage rose','Thistle','Blush mauve','Mauve','Smoky mauve','Victorian rose','Antique mauve','Wine mauve','Heather','Lilac rose','Muted mauve','Puce','Blush brown','Woodrose','Old rose'],
     'Reds':['Cherry blossom','Candy red','Red','Cherry','Crimson','Scarlet','Fire red','Tomato','Cardinal','Brick red','Venetian','Wine','Burgundy','Merlot','Cabernet','Oxblood','Poppy','Vermillion','Cinnabar','Lacquer red','True red','Classic red','Deep red','Dark red'],
     'Berries & Plums':['Berry','Raspberry','Strawberry jam','Cranberry','Currant','Mulberry','Boysenberry','Blackberry','Fig','Plum','Damson','Aubergine','Midnight berry','Gooseberry','Elderberry','Jam','Bilberry','Sloe','Prune'],
     'Corals & Oranges':['Apricot','Peach','Peach fuzz','Sherbet','Melon','Coral','Coral pink','Salmon','Grapefruit','Tangerine','Orange','Mango','Marigold','Saffron','Burnt orange','Pumpkin','Terracotta','Rust','Sienna','Clay orange','Papaya','Clementine','Cantaloupe','Kumquat','Persimmon','Cayenne','Adobe'],
     'Browns':['Warm brown','Brown','Chestnut','Hazel','Cinnamon','Mocha','Teak','Walnut','Pecan','Chocolate','Cocoa','Espresso','Mahogany','Umber','Sepia','Dark taupe','Brunette','Saddle','Tobacco','Bark','Hickory','Nutmeg','Clove','Roasted'],
-    'Mauves & Roses':['Rose quartz','Thistle','Blush mauve','Mauve','Dusty mauve','Smoky mauve','Victorian rose','Antique mauve','Wine mauve','Heather','Lilac rose','Muted mauve','Taupe rose','Puce','Rosy brown','Blush brown','Woodrose','Old rose'],
     'Purples':['Wisteria','Lilac','Lavender','Periwinkle purple','Orchid','Soft purple','Purple','Violet','Amethyst','Iris','Grape','Byzantium','Royal purple','Deep purple','Indigo','Eggplant','Ultraviolet','Cosmic','Dark orchid','Mauve purple','Soft violet','Pastel purple','Cool purple','Plum purple','Midnight purple','Blackcurrant'],
     'Blues':['Ice blue','Baby blue','Sky blue','Powder blue','Periwinkle','Cornflower','Forget-me-not','Slate blue','Blue','Bright blue','Cerulean','Azure','Royal blue','Cobalt','Sapphire','Electric blue','Steel blue','Denim','Navy','Midnight blue','Prussian blue','Petrol','Bluebell','Hyacinth','Tiffany blue','Carolina blue','French blue','Klein blue','Wedgwood','Ink','Blueprint'],
     'Teals & Cyans':['Aqua','Aquamarine','Seafoam','Turquoise','Robin egg','Teal','Cyan','Lagoon','Viridian','Deep teal','Biscay','Baltic','Patina','Verdigris','Duck egg','Opal','Spearmint','Haze'],
@@ -1084,13 +1085,23 @@ function bCP(sel){
 function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
-async function prevIP(inp){const files=Array.from(inp.files);for(const f of files){piPhotos.push(await f2b(f));}inp.value='';renderIPP();}
-function renderIPP(){const el=g('fpp');if(!piPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${piPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="piPhotos.splice(${i},1);renderIPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
+async function prevIP(inp){const files=Array.from(inp.files);for(const f of files){piPhotos.push(await f2b(f));}inp.value='';if(piCover>=piPhotos.length)piCover=0;renderIPP();}
+function renderIPP(){
+  const el=g('fpp');
+  if(!piPhotos.length){el.innerHTML='';return;}
+  el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${piPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px">
+    <img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;outline:${i===piCover?'3px solid var(--accent)':'none'};outline-offset:2px">
+    <button onclick="piCover=${i};renderIPP()" title="Set as cover" style="position:absolute;top:-5px;left:-5px;width:18px;height:18px;border-radius:50%;background:${i===piCover?'var(--accent)':'rgba(0,0,0,.35)'};color:#fff;border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center">★</button>
+    <button onclick="piPhotos.splice(${i},1);if(piCover>=${i}&&piCover>0)piCover--;renderIPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>`).join('')}</div><p style="font-size:10px;color:var(--text3);margin:0">★ tap to set cover photo</p>`;
+}
 
 function saveItem(){
   const name=gv('f-name').trim();if(!name){showToast('Please enter a name.');return;}
   const orig=eItemId?items.find(i=>i.id===eItemId):null;
-  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photos:[...piPhotos],photo:piPhotos[0]||null,addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
+  const orderedPhotos=[...piPhotos];
+  if(piCover>0&&piCover<orderedPhotos.length){orderedPhotos.unshift(orderedPhotos.splice(piCover,1)[0]);}
+  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photos:[...orderedPhotos],photo:orderedPhotos[0]||null,coverIndex:0,addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
   if(item.photos.length)localStorage.setItem('mph_items_'+item.id,JSON.stringify(item.photos));
   const wasEditing=eItemId;cm('item-modal');updateBadges();renderCurrent();
