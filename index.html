@@ -487,9 +487,9 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
         </label>
       </div>
       <div class="fr"><label>Skin type / skin tone</label><input class="inp" id="f-skin" placeholder="e.g. Oily, Fair-Medium, NC20"></div>
+      <div class="fr"><label>Notes / review</label><textarea class="txa" id="f-notes" placeholder="How it wears, tips, what to pair it with..."></textarea></div>
       <div class="fr"><label>Color</label><div class="cr" id="cpick"></div></div>
       <div class="fr"><label>Tags <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></label><input class="inp" id="f-tags" placeholder="holy grail, travel, gifted..."></div>
-      <div class="fr"><label>Notes / review</label><textarea class="txa" id="f-notes" placeholder="How it wears, tips, what to pair it with..."></textarea></div>
       <div class="fr"><label>Photos</label>
         <div id="fpp" style="margin-bottom:6px;"></div>
         <input type="file" id="f-photo" accept="image/*" multiple onchange="prevIP(this)">
@@ -803,13 +803,18 @@ const HAIRCARE_TYPES=['Hair mask','Hair oil','Scalp treatment','Dry shampoo','Sh
 const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing milk','Makeup remover','Eye makeup remover','Toner','Hydrating toner','Exfoliating toner','Essence','Facial mist','Serum','Vitamin C serum','Retinol','Retinoid','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Alpha arbutin','Ceramide serum','Snail mucin','Brightening serum','Dark spot serum','Ampoule','Booster','Moisturiser','Gel moisturiser','Rich cream','Barrier cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','SPF / Sunscreen','SPF moisturiser','Mineral sunscreen','Chemical sunscreen','Tinted SPF','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Neck cream','Hand cream','Collagen supplement','Skin supplement','Probiotic','Gummy supplement'];
 
 function updateBadges(){
+  if(window._items!==undefined)items=window._items;
+  if(window._looks!==undefined)looks=window._looks;
+  if(window._wishlist!==undefined)wishlist=window._wishlist;
+  if(window._cats!==undefined)cats=window._cats;
   const s=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
-  s('b-all',items.length);
+  const makeupItems=items.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  s('b-all',makeupItems.length);
   s('b-skincare',items.filter(i=>SKINCARE_TYPES.includes(i.type)).length);
   s('b-haircare',items.filter(i=>HAIRCARE_TYPES.includes(i.type)).length);
   s('b-favs',items.filter(i=>i.favourite).length);
   s('b-wish',wishlist.length);s('b-looks',looks.length);
-  s('db-stat',items.length+' product'+(items.length!==1?'s':'')+' · synced');
+  s('db-stat',items.length+' product'+(items.length!==1?'s':'')+' total · synced');
   setSyncDot('ok');
 }
 
@@ -1103,7 +1108,10 @@ function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
 async function prevIP(inp){
   const files=Array.from(inp.files);
-  g('fpp').innerHTML='<div style="padding:8px;font-size:12px;color:var(--text3)">Uploading...</div>';
+  const uploadingDiv=document.createElement('div');
+  uploadingDiv.style.cssText='padding:8px;font-size:12px;color:var(--text3)';
+  uploadingDiv.textContent='Uploading...';
+  g('fpp').appendChild(uploadingDiv);
   for(const f of files){
     try{
       const dataUrl=await f2b(f);
@@ -1165,10 +1173,13 @@ function rLooks(){
 }
 
 function openAddLook(){eLookId=null;selLookItems=new Set();plPhotos=[];g('lmt').textContent='Add look';g('ldel').style.display='none';['lf-name','lf-notes'].forEach(id=>g(id).value='');g('lf-date').value=new Date().toISOString().split('T')[0];g('lf-occ').value='';g('lf-photo').value='';g('lpp').innerHTML='';buildLookPicker();om('look-modal');}
-function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';const ph=l.photoUrls||[];g('lpp').innerHTML=ph.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${ph.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px">`).join('')}</div>`:'';buildLookPicker();om('look-modal');}
+function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[...(l.photoUrls||[])];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';renderLPP();buildLookPicker();om('look-modal');}
 async function prevLP(inp){
   const files=Array.from(inp.files);
-  g('lpp').innerHTML='<div style="padding:8px;font-size:12px;color:var(--text3)">Uploading...</div>';
+  const uploadingDiv=document.createElement('div');
+  uploadingDiv.style.cssText='padding:8px;font-size:12px;color:var(--text3)';
+  uploadingDiv.textContent='Uploading...';
+  g('lpp').appendChild(uploadingDiv);
   for(const f of files){
     try{
       const dataUrl=await f2b(f);
@@ -1179,7 +1190,25 @@ async function prevLP(inp){
   inp.value='';renderLPP();
 }
 function renderLPP(){const el=g('lpp');if(!plPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${plPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="plPhotos.splice(${i},1);renderLPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
-function buildLookPicker(){const el=g('lpick');if(!items.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add products first.</span>';return;}el.innerHTML=[...items].sort((a,b)=>a.name.localeCompare(b.name)).map(item=>`<span class="chip ${selLookItems.has(item.id)?'on':''}" onclick="togLI('${item.id}',this)">${(cats.find(c=>c.id===item.category)||{icon:''}).icon||''} ${item.name}</span>`).join('');}
+function buildLookPicker(){
+  const el=g('lpick');
+  if(!items.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add products first.</span>';return;}
+  const sorted=[...items].sort((a,b)=>{
+    const ca=cats.find(c=>c.id===a.category)?.name||'';
+    const cb=cats.find(c=>c.id===b.category)?.name||'';
+    return ca.localeCompare(cb)||a.name.localeCompare(b.name);
+  });
+  const grouped={};
+  sorted.forEach(item=>{
+    const cat=cats.find(c=>c.id===item.category)||{name:'Other',icon:'✨'};
+    if(!grouped[cat.name])grouped[cat.name]={icon:cat.icon||'✨',items:[]};
+    grouped[cat.name].items.push(item);
+  });
+  el.innerHTML=Object.entries(grouped).map(([name,{icon,items:its}])=>
+    `<div style="width:100%;margin:4px 0 2px"><span style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${icon} ${name}</span></div>`+
+    its.map(item=>`<span class="chip ${selLookItems.has(item.id)?'on':''}" onclick="togLI('${item.id}',this)">${item.name}</span>`).join('')
+  ).join('');
+}
 function togLI(id,el){if(selLookItems.has(id)){selLookItems.delete(id);el.classList.remove('on');}else{selLookItems.add(id);el.classList.add('on');}}
 
 function saveLook(){
@@ -1308,7 +1337,21 @@ function editRoutine(id){
 function buildRoutinePicker(){
   const el=g('rpick');
   if(!items.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add products first.</span>';return;}
-  el.innerHTML=[...items].sort((a,b)=>a.name.localeCompare(b.name)).map(item=>`<span class="chip ${selRoutineItems.includes(item.id)?'on':''}" onclick="togRI('${item.id}',this)">${(cats.find(c=>c.id===item.category)||{icon:''}).icon||''} ${item.name}</span>`).join('');
+  const sorted=[...items].sort((a,b)=>{
+    const ca=cats.find(c=>c.id===a.category)?.name||'';
+    const cb=cats.find(c=>c.id===b.category)?.name||'';
+    return ca.localeCompare(cb)||a.name.localeCompare(b.name);
+  });
+  const grouped={};
+  sorted.forEach(item=>{
+    const cat=cats.find(c=>c.id===item.category)||{name:'Other',icon:'✨'};
+    if(!grouped[cat.name])grouped[cat.name]={icon:cat.icon||'✨',items:[]};
+    grouped[cat.name].items.push(item);
+  });
+  el.innerHTML=Object.entries(grouped).map(([name,{icon,items:its}])=>
+    `<div style="width:100%;margin:4px 0 2px"><span style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${icon} ${name}</span></div>`+
+    its.map(item=>`<span class="chip ${selRoutineItems.includes(item.id)?'on':''}" onclick="togRI('${item.id}',this)">${item.name}</span>`).join('')
+  ).join('');
 }
 function togRI(id,el){
   const idx=selRoutineItems.indexOf(id);
