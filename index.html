@@ -155,7 +155,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 
 /* MAIN */
 .main{flex:1;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-.mscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.mscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:auto;}
 .ch{padding:24px 20px 0;}
 .cht{font-family:'DM Serif Display',serif;font-size:26px;letter-spacing:-.02em;margin-bottom:3px;}
 .chs{font-size:12px;color:var(--text3);margin-bottom:16px;}
@@ -184,7 +184,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* GRID */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;}
 .glg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
-.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);cursor:pointer;transition:all .14s;}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);cursor:pointer;transition:all .14s;contain:layout style paint;}
+#content{animation:fadeIn .12s ease;}
+@keyframes fadeIn{from{opacity:.5;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.grid{contain:layout style;}
 .card:hover{border-color:var(--border3);box-shadow:var(--sh);}
 .card:active{transform:scale(.98);}
 .cp{padding:12px;}
@@ -776,6 +779,11 @@ function hx(n){return(COLORS.find(c=>c.n===n)||{h:'#e0e0e0'}).h;}
 function f2b(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=e=>r(e.target.result);rd.onerror=j;rd.readAsDataURL(f);});}
 function g(id){return document.getElementById(id);}
 function gv(id){return(g(id)||{}).value||'';}
+function debounce(fn,ms=180){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+const _dRItems=debounce((fav)=>rItems(fav));
+const _dRSkincare=debounce(rSkincare);
+const _dRHaircare=debounce(rHaircare);
+
 function om(id){g(id).style.display='flex';}
 function cm(id){g(id).style.display='none';}
 
@@ -856,7 +864,7 @@ function rHaircare(){
   const total=hc.length;
   sCH(`<div class="ch"><div class="cht">Haircare</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
-    <div class="fbs"><input type="text" id="hcsrch" placeholder="Search haircare..." value="${sr.replace(/"/g,'&quot;')}" oninput="rHaircare()"></div>
+    <div class="fbs"><input type="text" id="hcsrch" placeholder="Search haircare..." value="${sr.replace(/"/g,'&quot;')}" oninput="_dRHaircare()"></div>
     <select class="fs" id="hctyp" onchange="rHaircare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="hccat" onchange="rHaircare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="hcstk" onchange="rHaircare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
@@ -888,7 +896,7 @@ function rSkincare(){
   const total=sc.length;
   sCH(`<div class="ch"><div class="cht">Skincare</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
-    <div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." value="${sr.replace(/"/g,'&quot;')}" oninput="rSkincare()"></div>
+    <div class="fbs"><input type="text" id="scsrch" placeholder="Search skincare..." value="${sr.replace(/"/g,'&quot;')}" oninput="_dRSkincare()"></div>
     <select class="fs" id="sctyp" onchange="rSkincare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="sccat" onchange="rSkincare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="scstk" onchange="rSkincare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
@@ -907,6 +915,11 @@ function rSkincare(){
 async function persist(col,item){if(window.fbSave)await window.fbSave(col,item);}
 async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
 
+// ── VIEW CACHE ────────────────────────────────────────────────────────────────
+const _vcache={};
+let _vdirty=new Set();
+function invalidateCache(...views){views.length?views.forEach(v=>_vdirty.add(v)):_vdirty=new Set(['all','skincare','haircare','favs','wishlist','looks','routines','compare','expiry','stats','settings']);}
+
 function nav(v){
   view=v;
   document.querySelectorAll('.nb,.bb').forEach(b=>b.classList.remove('active'));
@@ -914,24 +927,28 @@ function nav(v){
   g('mscroll').scrollTop=0;
   renderCurrent();
 }
+
 function renderCurrent(){
-  if(view==='all')rItems(false);
-  else if(view==='skincare')rSkincare();
-  else if(view==='haircare')rHaircare();
-  else if(view==='favs')rFavs();
-  else if(view==='wishlist')rWishlist();
-  else if(view==='looks')rLooks();
-  else if(view==='routines')rRoutines();
-  else if(view==='compare')rCompare();
-  else if(view==='expiry')rExpiry();
-  else if(view==='stats')rStats();
-  else if(view==='settings')rSettings();
+  requestAnimationFrame(()=>{
+    if(view==='all')rItems(false);
+    else if(view==='skincare')rSkincare();
+    else if(view==='haircare')rHaircare();
+    else if(view==='favs')rFavs();
+    else if(view==='wishlist')rWishlist();
+    else if(view==='looks')rLooks();
+    else if(view==='routines')rRoutines();
+    else if(view==='compare')rCompare();
+    else if(view==='expiry')rExpiry();
+    else if(view==='stats')rStats();
+    else if(view==='settings')rSettings();
+  });
 }
+
 function toggleMore(){g('mm').classList.toggle('open');g('mov').classList.toggle('open');}
 function closeMore(){g('mm').classList.remove('open');g('mov').classList.remove('open');}
 
-function sCH(h){g('content-header').innerHTML=h;}
-function sFB(h){g('filter-bar-wrap').innerHTML=h;}
+function sCH(h){const el=g('content-header');if(el.innerHTML!==h)el.innerHTML=h;}
+function sFB(h){const el=g('filter-bar-wrap');if(el.innerHTML!==h)el.innerHTML=h;}
 function sCt(h){g('content').innerHTML=h;}
 
 // ── ITEMS ──────────────────────────────────────────────────────────────────
@@ -956,7 +973,7 @@ function rItems(favsOnly=false){
   const total=favsOnly?makeupItems.filter(i=>i.favourite).length:makeupItems.length;
   sCH(`<div class="ch"><div class="cht">${title}</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
-    <div class="fbs"><input type="text" id="isrch" placeholder="Search products..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems(${favsOnly})"></div>
+    <div class="fbs"><input type="text" id="isrch" placeholder="Search products..." value="${sr.replace(/"/g,'&quot;')}" oninput="_dRItems(${favsOnly})"></div>
     <select class="fs" id="ftyp" onchange="rItems(${favsOnly})"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="fcat" onchange="rItems(${favsOnly})"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="fstk" onchange="rItems(${favsOnly})"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
@@ -986,7 +1003,7 @@ function iCard(item){
   const cat=cats.find(c=>c.id===item.category)||{};
   const photos=item.photoUrls||[];const fp=photos[0]||null;
   const exp=expiryStatus(item.expiry);
-  const swHtml=fp?`<div class="sw" style="padding:0"><img src="${fp}" alt=""><${photos.length>1?`span style="position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px">${photos.length}</span`:'span style="display:none">'}</span></div>`:`<div class="sw" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`;
+  const swHtml=fp?`<div class="sw" style="padding:0"><img src="${fp}" alt="" loading="lazy"><${photos.length>1?`span style="position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px">${photos.length}</span`:'span style="display:none">'}</span></div>`:`<div class="sw" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`;
   const tags=[];
   if(item.favourite)tags.push(`<span class="tg tg-fav">⭐ Fav</span>`);
   if(item.stock==='Low'||item.stock==='Empty')tags.push(`<span class="tg tg-low">🪫 ${item.stock}</span>`);
@@ -1000,7 +1017,7 @@ function iLR(item){
   const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
   const cat=cats.find(c=>c.id===item.category)||{};
   const photos=item.photoUrls||[];const fp=photos[0]||null;
-  const thumb=fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`;
+  const thumb=fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`;
   return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 13px">${thumb}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||'—'}</div></div>${item.favourite?'<span style="font-size:14px;">⭐</span>':''}</div>`;
 }
 
@@ -1012,7 +1029,7 @@ function openDetail(id){
   const cat=cats.find(c=>c.id===item.category)||{name:'—'};
   const photos=(items.find(i=>i.id===id)||{}).photoUrls||[];
   g('d-name').textContent=item.name;
-  g('d-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:220px;':'height:120px;'}object-fit:cover">`).join('')}</div>`:'';
+  g('d-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:220px;':'height:120px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
   const sw=g('d-swatch');sw.style.background=h;sw.style.color=fg;sw.textContent=cat.icon||'💄';
   const exp=expiryStatus(item.expiry);
   const rows=[['Category',cat.name],['Type',item.type||'—'],['Brand',item.brand||'—'],['Shade',item.shade||'—'],['Finish',item.finish||'—'],['Formula',item.formula||'—'],['Stock',item.stock||'—'],['Rating',item.rating||'—'],['Price paid',item.price||'—'],['Purchased',item.purchaseDate||'—'],['Expiry',item.expiry||(exp?`${item.expiry} (${exp.label})`:'—')],['Skin type',item.skin||'—'],['Store',item.store||'—'],['Favourite',item.favourite?'⭐ Yes':'No']];
@@ -1162,7 +1179,7 @@ function rLooks(){
     const photos=l.photoUrls||[];const fp=photos[0]||null;
     const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
     return`<div class="pc" onclick="openEditLook('${l.id}')">
-      <div class="pt">${fp?`<img src="${fp}" alt="">`:'✨'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
+      <div class="pt">${fp?`<img src="${fp}" alt="" loading="lazy">`:'✨'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
       </div>
       <div class="pb">
         <div class="cn">${l.name}</div>
@@ -1259,7 +1276,7 @@ function rExpiry(){
   function exGroup(title,list,emoji){
     if(!list.length)return'';
     return`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">${emoji} ${title} (${list.length})</div>
-    <div style="display:flex;flex-direction:column;gap:6px">${list.map(item=>{const exp=expiryStatus(item.expiry);const photos=item.photoUrls||[];const fp=photos[0]||null;const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px">${fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${(cats.find(c=>c.id===item.category)||{icon:'💄'}).icon}</div>`}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${item.brand||'—'}</div></div><span class="exp-badge ${exp.cls}">${exp.label}</span></div>`;}).join('')}</div></div>`;
+    <div style="display:flex;flex-direction:column;gap:6px">${list.map(item=>{const exp=expiryStatus(item.expiry);const photos=item.photoUrls||[];const fp=photos[0]||null;const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px">${fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${(cats.find(c=>c.id===item.category)||{icon:'💄'}).icon}</div>`}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${item.brand||'—'}</div></div><span class="exp-badge ${exp.cls}">${exp.label}</span></div>`;}).join('')}</div></div>`;
   }
   sCt(exGroup('Expired',groups.expired,'⚠️')+exGroup('Expiring soon',groups.soon,'🟡')+exGroup('Good',groups.ok,'✅')+(noExpiry.length?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">⬜ No expiry date (${noExpiry.length})</div><div style="font-size:12px;color:var(--text3)">Add expiry dates to these products in Edit.</div></div>`:''));
 }
@@ -1394,7 +1411,7 @@ function openRoutineDetail(id){
       const photos=(p.photoUrls||[]);const fp=photos[0]||null;
       return`<div class="routine-step">
         <div class="step-num">${i+1}</div>
-        ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${cat.icon||'💄'}</div>`}
+        ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${cat.icon||'💄'}</div>`}
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${p.name}</div>
           <div style="font-size:11px;color:var(--text2)">${[p.brand,p.type].filter(Boolean).join(' · ')||'—'}</div>
@@ -1422,7 +1439,7 @@ function rCompare(){
       <div class="cmp-header" style="grid-template-columns:repeat(${cols},1fr)">
         ${prods.map(p=>{const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};const photos=(p.photoUrls||[]);const fp=photos[0]||null;
         return`<div class="cmp-col">
-          ${fp?`<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:1px solid rgba(0,0,0,.08)"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div class="cmp-swatch" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`}
+          ${fp?`<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:1px solid rgba(0,0,0,.08)"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div class="cmp-swatch" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`}
           <div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
           <div style="font-size:11px;color:var(--text3)">${p.brand||'—'}</div>
           ${p.favourite?'<div style="font-size:11px;margin-top:4px">⭐ Favourite</div>':''}
@@ -1449,7 +1466,7 @@ function rCompare(){
       const h=hx(i.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===i.category)||{};
       const photos=(i.photoUrls||[]);const fp=photos[0]||null;
       return`<div class="card" onclick="cmpSel.push('${i.id}');rCompare()" style="display:flex;align-items:center;gap:12px;padding:10px 13px">
-        ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`}
+        ${fp?`<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div style="width:36px;height:36px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`}
         <div style="flex:1;min-width:0"><div class="cn">${i.name}</div><div class="cs">${[i.brand,i.type].filter(Boolean).join(' · ')||'—'}</div></div>
         <span style="font-size:18px;color:var(--text3)">+</span>
       </div>`;}).join('')}</div>`;
