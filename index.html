@@ -381,6 +381,9 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <button class="nb active" id="nav-all" onclick="nav('all')"><span class="ni">💄</span>Makeup<span class="nbg" id="b-all">0</span></button>
       <button class="nb" id="nav-skincare" onclick="nav('skincare')"><span class="ni">🧴</span>Skincare<span class="nbg" id="b-skincare">0</span></button>
       <button class="nb" id="nav-haircare" onclick="nav('haircare')"><span class="ni">💇</span>Haircare<span class="nbg" id="b-haircare">0</span></button>
+      <button class="nb" id="nav-perfume" onclick="nav('perfume')"><span class="ni">🌸</span>Perfume<span class="nbg" id="b-perfume">0</span></button>
+      <button class="nb" id="nav-synced" onclick="nav('synced')"><span class="ni">✨</span>All products<span class="nbg" id="b-synced">0</span></button>
+      <button class="nb" id="nav-past" onclick="nav('past')"><span class="ni">📦</span>Previously owned<span class="nbg" id="b-past">0</span></button>
       <button class="nb" id="nav-favs" onclick="nav('favs')"><span class="ni">⭐</span>Favourites<span class="nbg" id="b-favs">0</span></button>
       <button class="nb" id="nav-wishlist" onclick="nav('wishlist')"><span class="ni">🌟</span>Wishlist<span class="nbg" id="b-wish">0</span></button>
     </div>
@@ -420,13 +423,15 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
     <button class="bb active" id="bnav-all" onclick="nav('all')"><span class="bic">💄</span>Makeup</button>
     <button class="bb" id="bnav-skincare" onclick="nav('skincare')"><span class="bic">🧴</span>Skincare</button>
     <button class="bb" id="bnav-haircare" onclick="nav('haircare')"><span class="bic">💇</span>Haircare</button>
-    <button class="bb" id="bnav-favs" onclick="nav('favs')"><span class="bic">⭐</span>Favs</button>
+    <button class="bb" id="bnav-perfume" onclick="nav('perfume')"><span class="bic">🌸</span>Perfume</button>
     <button class="bb" id="bnav-more" onclick="toggleMore()"><span class="bic">•••</span>More</button>
   </div>
 </nav>
 <div class="mov" id="mov" onclick="closeMore()"></div>
 <div class="mm" id="mm">
-  <button class="mbtn" onclick="nav('looks');closeMore()"><span style="font-size:18px">✨</span>Looks</button>
+  <button class="mbtn" onclick="nav('synced');closeMore()"><span style="font-size:18px">✨</span>All products</button>
+  <button class="mbtn" onclick="nav('favs');closeMore()"><span style="font-size:18px">⭐</span>Favourites</button>
+  <button class="mbtn" onclick="nav('looks');closeMore()"><span style="font-size:18px">🎨</span>Looks</button>
   <button class="mbtn" onclick="nav('routines');closeMore()"><span style="font-size:18px">🗓️</span>Routines</button>
   <button class="mbtn" onclick="nav('compare');closeMore()"><span style="font-size:18px">⚖️</span>Compare products</button>
   <button class="mbtn" onclick="nav('wishlist');closeMore()"><span style="font-size:18px">🌟</span>Wishlist</button>
@@ -490,6 +495,17 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
         </label>
       </div>
       <div class="fr"><label>Skin type / skin tone</label><input class="inp" id="f-skin" placeholder="e.g. Oily, Fair-Medium, NC20"></div>
+      <div class="fr" id="f-perfnotes-wrap" style="display:none">
+        <label>Scent notes</label>
+        <div class="g2" style="margin-bottom:6px">
+          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🌿 Top notes</div><input class="inp" id="f-top" placeholder="e.g. Bergamot, Lemon"></div>
+          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🌸 Middle notes</div><input class="inp" id="f-mid" placeholder="e.g. Rose, Jasmine"></div>
+        </div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🪵 Base notes</div><input class="inp" id="f-base" placeholder="e.g. Sandalwood, Musk"></div>
+        <div style="margin-top:10px;margin-bottom:-4px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Season / occasion</div>
+          <input class="inp" id="f-season" placeholder="e.g. Summer, Date night, Office">
+        </div>
+      </div>
       <div class="fr"><label>Notes / review</label><textarea class="txa" id="f-notes" placeholder="How it wears, tips, what to pair it with..."></textarea></div>
       <div class="fr"><label>Color</label><div class="cr" id="cpick"></div></div>
       <div class="fr"><label>Tags <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></label><input class="inp" id="f-tags" placeholder="holy grail, travel, gifted..."></div>
@@ -515,10 +531,21 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <div id="d-swatch" style="height:72px;border-radius:10px;margin-bottom:13px;display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(0,0,0,.07);"></div>
       <div id="d-body"></div>
     </div>
-    <div class="mf">
+    <div class="mf" style="flex-wrap:wrap;gap:8px;">
       <button class="btn sm dn" onclick="delItem()">Delete</button>
+      <button class="btn sm" id="d-move-btn" onclick="toggleMovePanel()" style="display:none">Move to…</button>
+      <button class="btn sm" id="d-owned-btn" onclick="toggleOwned()" style="display:none"></button>
       <button class="btn sm" onclick="editItem()">Edit</button>
       <button class="btn sm pr" onclick="cm('detail-modal')">Close</button>
+      <div id="d-move-panel" style="display:none;width:100%;display:none;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:2px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Move to section</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm" id="mv-makeup" onclick="moveItem('makeup')">💄 Makeup</button>
+          <button class="btn sm" id="mv-skincare" onclick="moveItem('skincare')">🧴 Skincare</button>
+          <button class="btn sm" id="mv-haircare" onclick="moveItem('haircare')">💇 Haircare</button>
+          <button class="btn sm" id="mv-perfume" onclick="moveItem('perfume')">🌸 Perfume</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -807,6 +834,7 @@ function getPhotos(col,id){
 }
 
 const HAIRCARE_TYPES=['Hair mask','Hair oil','Scalp treatment','Dry shampoo','Shampoo','Conditioner','Co-wash','Clarifying shampoo','2-in-1 shampoo','Deep conditioner','Hair serum','Scalp scrub','Scalp oil','Hair gloss','Bond treatment','Protein treatment','Leave-in conditioner','Heat protectant','Hair spray','Mousse','Curl cream','Gel','Pomade','Wax','Texturising spray','Volume spray','Anti-frizz serum','Hair primer','Hair dye','Root touch-up','Toner','Colour gloss','Colour-protecting shampoo','Colour-protecting conditioner','Hair tool','Hair brush','Comb','Hair clip'];
+const PERFUME_TYPES=['Perfume','Eau de parfum','Eau de toilette','Eau de cologne','Solid perfume','Body mist','Hair perfume','Room spray','Candle','Reed diffuser','Scented oil'];
 
 const SKINCARE_TYPES=['Cleanser','Gel cleanser','Foam cleanser','Oil cleanser','Balm cleanser','Micellar water','Cleansing milk','Makeup remover','Eye makeup remover','Toner','Hydrating toner','Exfoliating toner','Essence','Facial mist','Serum','Vitamin C serum','Retinol','Retinoid','Bakuchiol','Niacinamide','Hyaluronic acid','Peptide serum','AHA serum','BHA serum','Azelaic acid','Salicylic acid','Glycolic acid','Lactic acid','Alpha arbutin','Ceramide serum','Snail mucin','Brightening serum','Dark spot serum','Ampoule','Booster','Moisturiser','Gel moisturiser','Rich cream','Barrier cream','Night cream','Sleeping mask','Face oil','Facial balm','Eye cream','Eye gel','Eye serum','Under-eye patches','Lip treatment','Lip serum','Lip mask','Lip scrub','Exfoliator','Physical scrub','Chemical exfoliant','Enzyme exfoliant','Peeling gel','Gommage','Face mask','Sheet mask','Clay mask','Mud mask','Overnight mask','Hydrating mask','Brightening mask','Charcoal mask','SPF / Sunscreen','SPF moisturiser','Mineral sunscreen','Chemical sunscreen','Tinted SPF','After-sun','Spot treatment','Pimple patch','Acne treatment','Hyperpigmentation treatment','Neck cream','Hand cream','Collagen supplement','Skin supplement','Probiotic','Gummy supplement'];
 
@@ -816,21 +844,26 @@ function updateBadges(){
   if(window._wishlist!==undefined)wishlist=window._wishlist;
   if(window._cats!==undefined)cats=window._cats;
   const s=(id,v)=>{const e=g(id);if(e)e.textContent=v;};
-  const makeupItems=items.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  const cur=items.filter(i=>i.owned!==false);
+  const makeupItems=cur.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
   s('b-all',makeupItems.length);
-  s('b-skincare',items.filter(i=>SKINCARE_TYPES.includes(i.type)).length);
-  s('b-haircare',items.filter(i=>HAIRCARE_TYPES.includes(i.type)).length);
-  s('b-favs',items.filter(i=>i.favourite).length);
+  s('b-skincare',cur.filter(i=>SKINCARE_TYPES.includes(i.type)).length);
+  s('b-haircare',cur.filter(i=>HAIRCARE_TYPES.includes(i.type)).length);
+  s('b-perfume',cur.filter(i=>PERFUME_TYPES.includes(i.type)).length);
+  s('b-synced',items.filter(i=>i.owned!==false).length);
+  s('b-past',items.filter(i=>i.owned===false).length);
+  s('b-favs',items.filter(i=>i.favourite&&i.owned!==false).length);
   s('b-wish',wishlist.length);s('b-looks',looks.length);
-  s('db-stat',items.length+' product'+(items.length!==1?'s':'')+' total · synced');
+  s('db-stat',cur.length+' product'+(cur.length!==1?'s':'')+' total · synced');
   setSyncDot('ok');
 }
 
 function rFavs(){
-  const favs=items.filter(i=>i.favourite);
-  const makeup=favs.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  const favs=items.filter(i=>i.favourite&&i.owned!==false);
+  const makeup=favs.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
   const skincare=favs.filter(i=>SKINCARE_TYPES.includes(i.type));
   const haircare=favs.filter(i=>HAIRCARE_TYPES.includes(i.type));
+  const perfume=favs.filter(i=>PERFUME_TYPES.includes(i.type));
   sCH(`<div class="ch"><div class="cht">Favourites</div><div class="chs">${favs.length} favourite${favs.length!==1?'s':''}</div></div>`);
   sFB('');
   if(!favs.length){sCt(`<div class="empty"><div class="ei">⭐</div><p>Star products in Makeup, Skincare or Haircare to see them here!</p></div>`);return;}
@@ -845,11 +878,11 @@ function rFavs(){
       <div class="grid">${list.map(iCard).join('')}</div>
     </div>`;
   }
-  sCt(section('Makeup','💄',makeup)+section('Skincare','🧴',skincare)+section('Haircare','💇',haircare));
+  sCt(section('Makeup','💄',makeup)+section('Skincare','🧴',skincare)+section('Haircare','💇',haircare)+section('Perfume','🌸',perfume));
 }
 
 function rHaircare(){
-  const hc=items.filter(i=>HAIRCARE_TYPES.includes(i.type));
+  const hc=items.filter(i=>HAIRCARE_TYPES.includes(i.type)&&i.owned!==false);
   const sr=gv('hcsrch').toLowerCase(),cf=gv('hccat'),tf=gv('hctyp'),sf=gv('hcstk'),so=gv('hcsort')||'name';
   let list=hc.filter(i=>{
     if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
@@ -881,7 +914,7 @@ function rHaircare(){
 }
 
 function rSkincare(){
-  const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type));
+  const sc=items.filter(i=>SKINCARE_TYPES.includes(i.type)&&i.owned!==false);
   const sr=gv('scsrch').toLowerCase(),cf=gv('sccat'),tf=gv('sctyp'),sf=gv('scstk'),so=gv('scsort')||'name';
   let list=sc.filter(i=>{
     if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
@@ -912,6 +945,72 @@ function rSkincare(){
   sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
 }
 
+function rPerfume(){
+  const pf=items.filter(i=>PERFUME_TYPES.includes(i.type)&&i.owned!==false);
+  const sr=gv('pfsrch').toLowerCase(),cf=gv('pfcat'),tf=gv('pftyp'),sf=gv('pfstk'),so=gv('pfsort')||'name';
+  let list=pf.filter(i=>{
+    if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
+    if(cf&&i.category!==cf)return false;
+    if(tf&&i.type!==tf)return false;
+    if(sf&&i.stock!==sf)return false;
+    return true;
+  });
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  list.sort(fns[so]||fns.name);
+  const types=[...new Set(pf.map(i=>i.type).filter(Boolean))].sort();
+  const total=pf.length;
+  sCH(`<div class="ch"><div class="cht">Perfume</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb">
+    <div class="fbs"><input type="text" id="pfsrch" placeholder="Search perfume..." value="${sr.replace(/"/g,'&quot;')}" oninput="rPerfume()"></div>
+    <select class="fs" id="pftyp" onchange="rPerfume()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
+    <select class="fs" id="pfcat" onchange="rPerfume()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+    <select class="fs" id="pfstk" onchange="rPerfume()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select class="fs" id="pfsort" onchange="rPerfume()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="vt">
+      <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
+      <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
+    </div>
+    <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
+  </div>`);
+  if(!pf.length){sCt(`<div class="empty"><div class="ei">🌸</div><p>No perfumes yet — click + Add to get started!</p></div>`);return;}
+  if(!list.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>`);return;}
+  sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+}
+
+function rAll(){
+  const sr=gv('allsrch').toLowerCase(),cf=gv('allcat'),tf=gv('alltyp'),sf=gv('allstk'),so=gv('allsort')||'name';
+  const allBase=items.filter(i=>i.owned!==false);
+  let list=allBase.filter(i=>{
+    if(sr&&![i.name,i.brand||'',i.type||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
+    if(cf&&i.category!==cf)return false;
+    if(tf&&i.type!==tf)return false;
+    if(sf&&i.stock!==sf)return false;
+    return true;
+  });
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  list.sort(fns[so]||fns.name);
+  const types=[...new Set(items.map(i=>i.type).filter(Boolean))].sort();
+  const total=allBase.length;
+  sCH(`<div class="ch"><div class="cht">All products</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb">
+    <div class="fbs"><input type="text" id="allsrch" placeholder="Search all products..." value="${sr.replace(/"/g,'&quot;')}" oninput="rAll()"></div>
+    <select class="fs" id="alltyp" onchange="rAll()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
+    <select class="fs" id="allcat" onchange="rAll()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+    <select class="fs" id="allstk" onchange="rAll()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select class="fs" id="allsort" onchange="rAll()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="vt">
+      <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
+      <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
+    </div>
+  </div>`);
+  if(!items.filter(i=>i.owned!==false).length){sCt(`<div class="empty"><div class="ei">✨</div><p>No products yet — add some in Makeup, Skincare, Haircare or Perfume!</p></div>`);return;}
+  if(!list.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No products match.</p></div>`);return;}
+  sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+}
+
+const _dRPerfume=debounce(rPerfume);
+const _dRAll=debounce(rAll);
+
 async function persist(col,item){if(window.fbSave)await window.fbSave(col,item);}
 async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
 
@@ -933,6 +1032,9 @@ function renderCurrent(){
     if(view==='all')rItems(false);
     else if(view==='skincare')rSkincare();
     else if(view==='haircare')rHaircare();
+    else if(view==='perfume')rPerfume();
+    else if(view==='synced')rAll();
+    else if(view==='past')rPast();
     else if(view==='favs')rFavs();
     else if(view==='wishlist')rWishlist();
     else if(view==='looks')rLooks();
@@ -957,8 +1059,10 @@ function rItems(favsOnly=false){
   const sr=gv('isrch').toLowerCase(),cf=gv('fcat'),tf=gv('ftyp'),sf=gv('fstk'),so=gv('fsort')||'name';
   // Exclude skincare types from makeup view
   let list=items.filter(i=>{
+    if(i.owned===false)return false;
     if(SKINCARE_TYPES.includes(i.type))return false;
     if(HAIRCARE_TYPES.includes(i.type))return false;
+    if(PERFUME_TYPES.includes(i.type))return false;
     if(favsOnly&&!i.favourite)return false;
     if(sr&&![i.name,i.brand||'',i.shade||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
     if(cf&&i.category!==cf)return false;
@@ -968,7 +1072,7 @@ function rItems(favsOnly=false){
   });
   const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
   list.sort(fns[so]||fns.name);
-  const makeupItems=items.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type));
+  const makeupItems=items.filter(i=>i.owned!==false&&!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
   const types=[...new Set(makeupItems.map(i=>i.type).filter(Boolean))].sort();
   const total=favsOnly?makeupItems.filter(i=>i.favourite).length:makeupItems.length;
   sCH(`<div class="ch"><div class="cht">${title}</div><div class="chs">${list.length} of ${total} product${total!==1?'s':''}</div></div>`);
@@ -998,19 +1102,30 @@ function expiryStatus(dateStr){
   return{cls:'exp-ok',label:'Good'};
 }
 
+const MIXED_VIEWS=['synced','past','favs','wishlist','looks','compare','stats'];
+function catAccent(item){
+  if(SKINCARE_TYPES.includes(item.type))return'#a8d4bc';
+  if(HAIRCARE_TYPES.includes(item.type))return'#a8bbde';
+  if(PERFUME_TYPES.includes(item.type))return'#c9b0dc';
+  return'#e0a8b8';
+}
+
 function iCard(item){
   const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
   const cat=cats.find(c=>c.id===item.category)||{};
   const photos=item.photoUrls||[];const fp=photos[0]||null;
   const exp=expiryStatus(item.expiry);
+  const accent=MIXED_VIEWS.includes(view)?catAccent(item):null;
   const swHtml=fp?`<div class="sw" style="padding:0"><img src="${fp}" alt="" loading="lazy"><${photos.length>1?`span style="position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px">${photos.length}</span`:'span style="display:none">'}</span></div>`:`<div class="sw" style="background:${h};color:${fg}">${cat.icon||'💄'}</div>`;
   const tags=[];
   if(item.favourite)tags.push(`<span class="tg tg-fav">⭐ Fav</span>`);
   if(item.stock==='Low'||item.stock==='Empty')tags.push(`<span class="tg tg-low">🪫 ${item.stock}</span>`);
-  if(exp&&exp.cls==='exp-expired')tags.push(`<span class="tg tg-exp">⚠️ Expired</span>`);
-  else if(exp&&exp.cls==='exp-soon')tags.push(`<span class="tg tg-exp">${exp.label}</span>`);
+  if(item.owned!==false){
+    if(exp&&exp.cls==='exp-expired')tags.push(`<span class="tg tg-exp">⚠️ Expired</span>`);
+    else if(exp&&exp.cls==='exp-soon')tags.push(`<span class="tg tg-exp">${exp.label}</span>`);
+  }
   (item.tags||[]).slice(0,1).forEach(t=>tags.push(`<span class="tg">${t}</span>`));
-  return`<div class="card cp" onclick="openDetail('${item.id}')">${swHtml}<div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||cat.name||'—'}</div><div class="tgs">${tags.join('')}</div></div>`;
+  return`<div class="card cp" style="${accent?`border-left:3px solid ${accent}`:''}" onclick="openDetail('${item.id}')">${swHtml}<div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||cat.name||'—'}</div><div class="tgs">${tags.join('')}</div></div>`;
 }
 
 function iLR(item){
@@ -1018,7 +1133,8 @@ function iLR(item){
   const cat=cats.find(c=>c.id===item.category)||{};
   const photos=item.photoUrls||[];const fp=photos[0]||null;
   const thumb=fp?`<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden"><img src="${fp}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`:`<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`;
-  return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 13px">${thumb}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||'—'}</div></div>${item.favourite?'<span style="font-size:14px;">⭐</span>':''}</div>`;
+  const accent=MIXED_VIEWS.includes(view)?catAccent(item):null;
+  return`<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 13px;${accent?`border-left:3px solid ${accent}`:''}">${thumb}<div style="flex:1;min-width:0"><div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||'—'}</div></div>${item.favourite?'<span style="font-size:14px;">⭐</span>':''}</div>`;
 }
 
 // ── DETAIL ──────────────────────────────────────────────────────────────────
@@ -1032,11 +1148,59 @@ function openDetail(id){
   g('d-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:220px;':'height:120px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
   const sw=g('d-swatch');sw.style.background=h;sw.style.color=fg;sw.textContent=cat.icon||'💄';
   const exp=expiryStatus(item.expiry);
+  const isPf=PERFUME_TYPES.includes(item.type);
   const rows=[['Category',cat.name],['Type',item.type||'—'],['Brand',item.brand||'—'],['Shade',item.shade||'—'],['Finish',item.finish||'—'],['Formula',item.formula||'—'],['Stock',item.stock||'—'],['Rating',item.rating||'—'],['Price paid',item.price||'—'],['Purchased',item.purchaseDate||'—'],['Expiry',item.expiry||(exp?`${item.expiry} (${exp.label})`:'—')],['Skin type',item.skin||'—'],['Store',item.store||'—'],['Favourite',item.favourite?'⭐ Yes':'No']];
-  g('d-body').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${rows.map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>${exp?`<div style="margin-bottom:10px"><span class="exp-badge ${exp.cls}">${exp.cls==='exp-expired'?'⚠️':'🗓️'} ${exp.label}</span></div>`:''} ${item.tags?.length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}`;
+  const pfNotes=isPf&&(item.topNotes||item.midNotes||item.baseNotes)?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Scent profile</div><div style="display:flex;gap:16px">${item.topNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🌿</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Top</div><div style="font-size:12px">${item.topNotes}</div></div>`:''}${item.midNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🌸</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Middle</div><div style="font-size:12px">${item.midNotes}</div></div>`:''}${item.baseNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🪵</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Base</div><div style="font-size:12px">${item.baseNotes}</div></div>`:''}</div>${item.season?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">🗓️ ${item.season}</div>`:''}</div>`:'';
+  g('d-body').innerHTML=`${pfNotes}<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${rows.map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>${exp?`<div style="margin-bottom:10px"><span class="exp-badge ${exp.cls}">${exp.cls==='exp-expired'?'⚠️':'🗓️'} ${exp.label}</span></div>`:''} ${item.tags?.length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}`;
+  // Show move button and dim the current section's button
+  const mb=g('d-move-btn');if(mb)mb.style.display='';
+  const ob=g('d-owned-btn');if(ob){ob.style.display='';ob.textContent=item.owned===false?'↩ Mark as current':'📦 Previously owned';}
+  const curSec=SKINCARE_TYPES.includes(item.type)?'skincare':HAIRCARE_TYPES.includes(item.type)?'haircare':PERFUME_TYPES.includes(item.type)?'perfume':'makeup';
+  ['makeup','skincare','haircare','perfume'].forEach(s=>{const b=g('mv-'+s);if(b){b.disabled=s===curSec;b.style.opacity=s===curSec?'0.4':'1';}});
+  const mp=g('d-move-panel');if(mp)mp.style.display='none';
   om('detail-modal');
 }
 function editItem(){cm('detail-modal');openAddItem(vItemId);}
+function rPast(){
+  const past=items.filter(i=>i.owned===false);
+  const makeup=past.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
+  const skincare=past.filter(i=>SKINCARE_TYPES.includes(i.type));
+  const haircare=past.filter(i=>HAIRCARE_TYPES.includes(i.type));
+  const perfume=past.filter(i=>PERFUME_TYPES.includes(i.type));
+  sCH(`<div class="ch"><div class="cht">Previously owned</div><div class="chs">${past.length} item${past.length!==1?'s':''}</div></div>`);
+  sFB('');
+  if(!past.length){sCt(`<div class="empty"><div class="ei">📦</div><p>No previously owned items yet. Mark a product as "Previously owned" from its detail view.</p></div>`);return;}
+  function section(title,icon,list){
+    if(!list.length)return'';
+    return`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:18px">${icon}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${title}</span>
+        <span style="font-size:10px;color:var(--text3)">(${list.length})</span>
+      </div>
+      <div class="grid">${list.map(iCard).join('')}</div>
+    </div>`;
+  }
+  sCt(section('Makeup','💄',makeup)+section('Skincare','🧴',skincare)+section('Haircare','💇',haircare)+section('Perfume','🌸',perfume));
+}
+function toggleOwned(){
+  const item=items.find(i=>i.id===vItemId);if(!item)return;
+  item.owned=item.owned===false?true:false;item.updatedAt=Date.now();
+  items=items.map(i=>i.id===vItemId?item:i);
+  persist('items',item);
+  cm('detail-modal');updateBadges();renderCurrent();
+  showToast(item.owned===false?'Marked as previously owned':'Marked as current ✓');
+}
+function toggleMovePanel(){const p=g('d-move-panel');if(p)p.style.display=p.style.display==='none'?'block':'none';}
+function moveItem(toSection){
+  const item=items.find(i=>i.id===vItemId);if(!item)return;
+  const defaults={makeup:'Foundation',skincare:'Cleanser',haircare:'Shampoo',perfume:'Perfume'};
+  item.type=defaults[toSection];item.updatedAt=Date.now();
+  items=items.map(i=>i.id===vItemId?item:i);
+  persist('items',item);
+  cm('detail-modal');updateBadges();renderCurrent();
+  showToast(`Moved to ${toSection.charAt(0).toUpperCase()+toSection.slice(1)} ✓`);
+}
 
 // ── ITEM FORM ────────────────────────────────────────────────────────────────
 function setTypeMode(mode){
@@ -1067,9 +1231,15 @@ function setTypeMode(mode){
     <optgroup label="— Styling —"><option>Heat protectant</option><option>Hair spray</option><option>Mousse</option><option>Curl cream</option><option>Gel</option><option>Pomade</option><option>Wax</option><option>Texturising spray</option><option>Volume spray</option><option>Anti-frizz serum</option><option>Hair primer</option></optgroup>
     <optgroup label="— Colour —"><option>Hair dye</option><option>Root touch-up</option><option>Toner</option><option>Colour gloss</option><option>Colour-protecting shampoo</option><option>Colour-protecting conditioner</option></optgroup>
     <optgroup label="— Tools &amp; Accessories —"><option>Hair tool</option><option>Hair brush</option><option>Comb</option><option>Hair clip</option></optgroup>`;
+  const perfumeOpts=`
+    <optgroup label="— Fragrance —"><option>Perfume</option><option>Eau de parfum</option><option>Eau de toilette</option><option>Eau de cologne</option><option>Solid perfume</option><option>Body mist</option><option>Hair perfume</option></optgroup>
+    <optgroup label="— Home —"><option>Room spray</option><option>Candle</option><option>Reed diffuser</option><option>Scented oil</option></optgroup>`;
   const sel=g('f-type');
+  const isPf=mode==='perfume';
+  const pw=g('f-perfnotes-wrap');if(pw)pw.style.display=isPf?'':'none';
   if(mode==='skincare'){sel.innerHTML=skincareOpts;sel.value='Cleanser';}
   else if(mode==='haircare'){sel.innerHTML=haircareOpts;sel.value='Shampoo';}
+  else if(mode==='perfume'){sel.innerHTML=perfumeOpts;sel.value='Perfume';}
   else{sel.innerHTML=makeupOpts;sel.value='Foundation';}
 }
 
@@ -1084,10 +1254,12 @@ function openAddItem(id=null){
   v('f-formula',item?.formula);v('f-price',item?.price);v('f-pdate',item?.purchaseDate);
   v('f-expiry',item?.expiry);v('f-skin',item?.skin);v('f-store',item?.store);
   v('f-tags',(item?.tags||[]).join(', '));v('f-notes',item?.notes);
+  v('f-top',item?.topNotes);v('f-mid',item?.midNotes);v('f-base',item?.baseNotes);v('f-season',item?.season);
   // Set mode based on current view or item type
   const isSkincareItem=item&&SKINCARE_TYPES.includes(item.type);
   const isHaircareItem=item&&HAIRCARE_TYPES.includes(item.type);
-  const mode=isSkincareItem||view==='skincare'?'skincare':isHaircareItem||view==='haircare'?'haircare':'makeup';
+  const isPerfumeItem=item&&PERFUME_TYPES.includes(item.type);
+  const mode=isSkincareItem||view==='skincare'?'skincare':isHaircareItem||view==='haircare'?'haircare':isPerfumeItem||view==='perfume'?'perfume':'makeup';
   setTypeMode(mode);
   if(item?.type)g('f-type').value=item.type;
   if(item?.category)g('f-cat').value=item.category;
@@ -1153,7 +1325,8 @@ function saveItem(){
   const orig=eItemId?items.find(i=>i.id===eItemId):null;
   const orderedPhotos=[...piPhotos];
   if(piCover>0&&piCover<orderedPhotos.length){orderedPhotos.unshift(orderedPhotos.splice(piCover,1)[0]);}
-  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now()};
+  const isPfType=PERFUME_TYPES.includes(gv('f-type'));
+  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now(),...(isPfType&&{topNotes:gv('f-top').trim()||undefined,midNotes:gv('f-mid').trim()||undefined,baseNotes:gv('f-base').trim()||undefined,season:gv('f-season').trim()||undefined})};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
   // photos stored as Cloudinary URLs on item.photoUrls — saved to Firestore via persist()
   const wasEditing=eItemId;cm('item-modal');updateBadges();renderCurrent();
