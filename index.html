@@ -1349,7 +1349,7 @@ function saveItem(){
   const orderedPhotos=[...piPhotos];
   if(piCover>0&&piCover<orderedPhotos.length){orderedPhotos.unshift(orderedPhotos.splice(piCover,1)[0]);}
   const isPfType=PERFUME_TYPES.includes(gv('f-type'));
-  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now(),...(isPfType&&{topNotes:gv('f-top').trim()||undefined,midNotes:gv('f-mid').trim()||undefined,baseNotes:gv('f-base').trim()||undefined,season:gv('f-season').trim()||undefined})};
+  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now(),...(orig?.owned===false&&{owned:false}),...(isPfType&&{topNotes:gv('f-top').trim()||undefined,midNotes:gv('f-mid').trim()||undefined,baseNotes:gv('f-base').trim()||undefined,season:gv('f-season').trim()||undefined})};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
   // photos stored as Cloudinary URLs on item.photoUrls — saved to Firestore via persist()
   const wasEditing=eItemId;
@@ -1445,16 +1445,15 @@ function rWishlist(){
   const sr=gv('wsrch').toLowerCase();
   const list=wishlist.filter(w=>!sr||w.name.toLowerCase().includes(sr)||(w.brand||'').toLowerCase().includes(sr));
   if(!list.length){sCt(`<div class="empty"><div class="ei">🌟</div><p>${wishlist.length?'No items match.':'Add makeup you want to buy!'}</p></div>`);return;}
-  sCt(`<div class="grid">${list.map(w=>{const fp=(w.photoUrls||[])[0]||null;return`<div class="card cp">
+  sCt(`<div class="grid">${list.map(w=>{const fp=(w.photoUrls||[])[0]||null;return`<div class="card cp" onclick="openEditWish('${w.id}')">
     ${fp?`<div class="sw" style="padding:0"><img src="${fp}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>`:`<div class="sw" style="background:var(--bg3);font-size:26px">🌟</div>`}
     <div class="cn">${w.name}</div>
     <div class="cs">${[w.brand,w.price].filter(Boolean).join(' · ')||'—'}</div>
     ${w.notes?`<div style="font-size:11px;color:var(--text2);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.notes}</div>`:''}
     <div class="tgs" style="margin-bottom:8px">${w.priority?`<span class="tg tg-fav">${w.priority}</span>`:''}</div>
-    ${w.url?`<a href="${w.url}" target="_blank" style="font-size:11px;color:var(--text2);text-decoration:none;display:block;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🔗 ${w.url}</a>`:''}
-    <div style="display:flex;gap:5px">
+    ${w.url?`<a href="${w.url}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:var(--text2);text-decoration:none;display:block;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🔗 ${w.url}</a>`:''}
+    <div style="display:flex;gap:5px" onclick="event.stopPropagation()">
       <button class="btn sm" style="flex:1;justify-content:center" onclick="wish2col('${w.id}')">→ Add to collection</button>
-      <button class="btn sm" onclick="openEditWish('${w.id}')">Edit</button>
     </div>
   </div>`}).join('')}</div>`);
 }
