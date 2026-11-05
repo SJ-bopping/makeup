@@ -1436,7 +1436,7 @@ function rLooks(){
       <div class="pb">
         <div class="cn">${l.name}</div>
         ${l.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l.occasion}</div>`:''}
-        <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:5px">${prods.length?prods.map(p=>p.name).join(', '):'No products tagged'}</div>
+        ${prods.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${prods.map(p=>{const ph=(p.photoUrls||[])[0];const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};return ph?`<img src="${ph}" title="${p.name}" style="width:30px;height:30px;border-radius:6px;object-fit:cover;border:1px solid rgba(0,0,0,.08)" loading="lazy">`:`<div title="${p.name}" style="width:30px;height:30px;border-radius:6px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`;}).join('')}</div>`:`<div style="font-size:11px;color:var(--text3);margin-bottom:5px">No products tagged</div>`}
       </div></div>`;
   }).join('')}</div>`);
 }
