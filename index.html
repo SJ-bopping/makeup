@@ -270,11 +270,12 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* COLOR PICKER GROUPS */
-.cpg{margin-bottom:10px;}
-.cpg-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;display:block;}
+.cpg{margin-bottom:12px;}
+.cpg-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:block;}
 .cr{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
-.cd{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .12s;flex-shrink:0;}
+.cd{width:52px;height:38px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all .12s;flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;}
 .cd.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent);}
+.cd-lbl{font-size:7.5px;font-weight:600;text-align:center;line-height:1.1;padding:0 2px 2px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:absolute;bottom:0;left:0;right:0;pointer-events:none;}
 
 /* COMPARE */
 .cmp-grid{display:grid;gap:12px;}
@@ -1350,7 +1351,7 @@ function openAddItem(id=null,fromWish=null){
 
 function bCP(sel){
   const groups={
-    'Colourless':['Colourless','Clear','Translucent','Transparent'],
+    'Colourless':['Colourless','Clear','Transparent'],
     'Nudes & Skin Tones':['Clear/nude','Porcelain','Ivory','Alabaster','Pearl','Nude','Vanilla','Linen','Cashmere','Beige','Sand','Biscuit','Buff','Wheat','Golden beige','Caramel','Chai','Tan','Honey','Amber','Toffee','Mushroom','Taupe','Greige','Stone','Pebble','Driftwood','Clay','Toasted','Praline','Almond','Hazelnut','Biscotti','Truffle','Fawn','Ecru','Raw silk','Warm nude','Cool nude','Pink nude','Sheer nude','Natural','Skin'],
     'Pinks & Mauves':['Baby pink','Petal','Blush','Cotton candy','Ballet','Shell','Cameo','Fairy floss','Piglet','Ballerina','Foam','Pink','Rose','Watermelon','Bubblegum','Flamingo','Carnation','Punch','Geranium','Strawberry','Neon pink','Electric pink','Vivid pink','Shocking pink','Candy pink','Melon pink','Hot pink','Fuchsia','Magenta','Cerise','Dusty rose','Antique rose','Rosewood','Mauve rose','Cameo rose','Deep rose','Dried rose','Faded rose','Vintage rose','Thistle','Blush mauve','Mauve','Smoky mauve','Victorian rose','Antique mauve','Wine mauve','Heather','Lilac rose','Muted mauve','Puce','Blush brown','Woodrose','Old rose'],
     'Reds':['Cherry blossom','Candy red','Red','Cherry','Crimson','Scarlet','Fire red','Tomato','Cardinal','Brick red','Venetian','Wine','Burgundy','Merlot','Cabernet','Oxblood','Poppy','Vermillion','Cinnabar','Lacquer red','True red','Classic red','Deep red','Dark red'],
@@ -1366,7 +1367,7 @@ function bCP(sel){
     'Whites, Creams & Greys':['White','Off-white','Cream','Seashell','Snow','Milk','Dove','Ash','Silver grey','Grey','Cool grey','Warm grey','Mauve grey','Slate','Steel','Charcoal','Dark grey','Graphite','Near black','Black','Marshmallow','Lace','Parchment','Oat','Fog','Mist','Pebble grey','Taupe grey','Smoke','Shadow','Soot'],
     'Specials & Effects':['Multicolor','Glitter','Duo-chrome','Holographic','Aurora','Sunset','Galaxy','Mermaid','Prism','Opalescent','Oil slick','Cotton candy swirl','Peacock','Lava'],
   };
-  g('cpick').innerHTML=Object.entries(groups).map(([grp,names])=>`<div class="cpg"><span class="cpg-label">${grp}</span><div class="cr">${names.map(n=>{const c=COLORS.find(x=>x.n===n);if(!c)return'';return`<div class="cd ${sel===n?'on':''}" title="${n}" style="background:${c.h}" onclick="selC('${n}',this)"></div>`;}).join('')}</div></div>`).join('');
+  g('cpick').innerHTML=Object.entries(groups).map(([grp,names])=>`<div class="cpg"><span class="cpg-label">${grp}</span><div class="cr">${names.map(n=>{const c=COLORS.find(x=>x.n===n);if(!c)return'';const light=isLight(c.h);return`<div class="cd ${sel===n?'on':''}" title="${n}" style="background:${c.h}" onclick="selC('${n}',this)"><span class="cd-lbl" style="color:${light?'rgba(0,0,0,.7)':'rgba(255,255,255,.85)'}">${n}</span></div>`;}).join('')}</div></div>`).join('');
 }
 function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
