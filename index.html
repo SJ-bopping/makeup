@@ -395,6 +395,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
     </div>
     <div class="ns">
       <span class="nl">Analyse</span>
+      <button class="nb" id="nav-brands" onclick="nav('brands')"><span class="ni">🏷️</span>Brands</button>
       <button class="nb" id="nav-compare" onclick="nav('compare')"><span class="ni">⚖️</span>Compare</button>
       <button class="nb" id="nav-stats" onclick="nav('stats')"><span class="ni">📊</span>Insights</button>
     </div>
@@ -434,6 +435,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   <button class="mbtn" onclick="nav('favs');closeMore()"><span style="font-size:18px">⭐</span>Favourites</button>
   <button class="mbtn" onclick="nav('looks');closeMore()"><span style="font-size:18px">🎨</span>Looks</button>
   <button class="mbtn" onclick="nav('routines');closeMore()"><span style="font-size:18px">🗓️</span>Routines</button>
+  <button class="mbtn" onclick="nav('brands');closeMore()"><span style="font-size:18px">🏷️</span>Brands</button>
   <button class="mbtn" onclick="nav('compare');closeMore()"><span style="font-size:18px">⚖️</span>Compare products</button>
   <button class="mbtn" onclick="nav('wishlist');closeMore()"><span style="font-size:18px">🌟</span>Wishlist</button>
   <button class="mbtn" onclick="nav('expiry');closeMore()"><span style="font-size:18px">📅</span>Expiry tracker</button>
@@ -495,7 +497,13 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
           <span style="font-size:13px;">Mark as favourite ⭐</span>
         </label>
       </div>
-      <div class="fr"><label>Skin type / skin tone</label><input class="inp" id="f-skin" placeholder="e.g. Oily, Fair-Medium, NC20"></div>
+      <div class="fr">
+        <label>Would repurchase <span style="font-weight:400;color:var(--text3)">(toggle)</span></label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px;">
+          <input type="checkbox" id="f-repurchase" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent);">
+          <span style="font-size:13px;">Yes, I'd buy this again 🔁</span>
+        </label>
+      </div>
       <div class="fr" id="f-perfnotes-wrap" style="display:none">
         <label>Scent notes</label>
         <div class="g2" style="margin-bottom:6px">
@@ -910,7 +918,7 @@ function rHaircare(){
     if(sf&&i.stock!==sf)return false;
     return true;
   });
-  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'),price:(a,b)=>parseFloat((b.price||'0').replace(/[^0-9.]/g,''))-parseFloat((a.price||'0').replace(/[^0-9.]/g,''))};
   list.sort(fns[so]||fns.name);
   const types=[...new Set(hc.map(i=>i.type).filter(Boolean))].sort();
   const total=hc.length;
@@ -920,7 +928,7 @@ function rHaircare(){
     <select class="fs" id="hctyp" onchange="rHaircare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="hccat" onchange="rHaircare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="hcstk" onchange="rHaircare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
-    <select class="fs" id="hcsort" onchange="rHaircare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="fs" id="hcsort" onchange="rHaircare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry'],['price','Price']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt">
       <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
       <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
@@ -942,7 +950,7 @@ function rSkincare(){
     if(sf&&i.stock!==sf)return false;
     return true;
   });
-  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'),price:(a,b)=>parseFloat((b.price||'0').replace(/[^0-9.]/g,''))-parseFloat((a.price||'0').replace(/[^0-9.]/g,''))};
   list.sort(fns[so]||fns.name);
   const types=[...new Set(sc.map(i=>i.type).filter(Boolean))].sort();
   const total=sc.length;
@@ -952,7 +960,7 @@ function rSkincare(){
     <select class="fs" id="sctyp" onchange="rSkincare()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="sccat" onchange="rSkincare()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="scstk" onchange="rSkincare()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
-    <select class="fs" id="scsort" onchange="rSkincare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="fs" id="scsort" onchange="rSkincare()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry'],['price','Price']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt">
       <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
       <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
@@ -974,7 +982,7 @@ function rPerfume(){
     if(sf&&i.stock!==sf)return false;
     return true;
   });
-  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'),price:(a,b)=>parseFloat((b.price||'0').replace(/[^0-9.]/g,''))-parseFloat((a.price||'0').replace(/[^0-9.]/g,''))};
   list.sort(fns[so]||fns.name);
   const types=[...new Set(pf.map(i=>i.type).filter(Boolean))].sort();
   const total=pf.length;
@@ -984,7 +992,7 @@ function rPerfume(){
     <select class="fs" id="pftyp" onchange="rPerfume()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="pfcat" onchange="rPerfume()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="pfstk" onchange="rPerfume()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
-    <select class="fs" id="pfsort" onchange="rPerfume()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="fs" id="pfsort" onchange="rPerfume()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry'],['price','Price']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt">
       <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
       <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
@@ -1006,7 +1014,7 @@ function rAll(){
     if(sf&&i.stock!==sf)return false;
     return true;
   });
-  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'),price:(a,b)=>parseFloat((b.price||'0').replace(/[^0-9.]/g,''))-parseFloat((a.price||'0').replace(/[^0-9.]/g,''))};
   list.sort(fns[so]||fns.name);
   const types=[...new Set(items.map(i=>i.type).filter(Boolean))].sort();
   const total=allBase.length;
@@ -1016,7 +1024,7 @@ function rAll(){
     <select class="fs" id="alltyp" onchange="rAll()"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="allcat" onchange="rAll()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="allstk" onchange="rAll()"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
-    <select class="fs" id="allsort" onchange="rAll()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="fs" id="allsort" onchange="rAll()">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry'],['price','Price']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt">
       <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
       <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
@@ -1029,6 +1037,7 @@ function rAll(){
 
 const _dRPerfume=debounce(rPerfume);
 const _dRAll=debounce(rAll);
+
 
 async function persist(col,item){if(window.fbSave)await window.fbSave(col,item);}
 async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
@@ -1058,6 +1067,7 @@ function renderCurrent(){
     else if(view==='wishlist')rWishlist();
     else if(view==='looks')rLooks();
     else if(view==='routines')rRoutines();
+    else if(view==='brands')rBrands();
     else if(view==='compare')rCompare();
     else if(view==='expiry')rExpiry();
     else if(view==='stats')rStats();
@@ -1089,7 +1099,7 @@ function rItems(favsOnly=false){
     if(sf&&i.stock!==sf)return false;
     return true;
   });
-  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999')};
+  const fns={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),type:(a,b)=>(a.type||'').localeCompare(b.type||''),newest:(a,b)=>b.addedAt-a.addedAt,expiry:(a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'),price:(a,b)=>parseFloat((b.price||'0').replace(/[^0-9.]/g,''))-parseFloat((a.price||'0').replace(/[^0-9.]/g,''))};
   list.sort(fns[so]||fns.name);
   const makeupItems=items.filter(i=>i.owned!==false&&!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
   const types=[...new Set(makeupItems.map(i=>i.type).filter(Boolean))].sort();
@@ -1100,7 +1110,7 @@ function rItems(favsOnly=false){
     <select class="fs" id="ftyp" onchange="rItems(${favsOnly})"><option value="">All types</option>${types.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fs" id="fcat" onchange="rItems(${favsOnly})"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${cf===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
     <select class="fs" id="fstk" onchange="rItems(${favsOnly})"><option value="">Any stock</option>${['Full','75%','50%','25%','Low','Empty'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
-    <select class="fs" id="fsort" onchange="rItems(${favsOnly})">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="fs" id="fsort" onchange="rItems(${favsOnly})">${[['name','Name A–Z'],['brand','Brand'],['type','Type'],['newest','Newest'],['expiry','Expiry'],['price','Price']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt">
       <button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button>
       <button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button>
@@ -1143,6 +1153,7 @@ function iCard(item){
     if(exp&&exp.cls==='exp-expired')tags.push(`<span class="tg tg-exp">⚠️ Expired</span>`);
     else if(exp&&exp.cls==='exp-soon')tags.push(`<span class="tg tg-exp">${exp.label}</span>`);
   }
+  if(item.owned===false&&item.repurchase)tags.push(`<span class="tg tg-fav">🔁 Repurchase</span>`);
   (item.tags||[]).slice(0,1).forEach(t=>tags.push(`<span class="tg">${t}</span>`));
   return`<div class="card cp" style="${accent?`border-left:3px solid ${accent}`:''}" onclick="openDetail('${item.id}')">${swHtml}<div class="cn">${item.name}</div><div class="cs">${[item.brand,item.shade||item.type].filter(Boolean).join(' · ')||cat.name||'—'}</div><div class="tgs">${tags.join('')}</div></div>`;
 }
@@ -1165,12 +1176,14 @@ function openDetail(id){
   const photos=(items.find(i=>i.id===id)||{}).photoUrls||[];
   g('d-name').textContent=item.name;
   g('d-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:220px;':'height:120px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
-  const sw=g('d-swatch');sw.style.background=h;sw.style.color=fg;sw.textContent=cat.icon||'💄';
+  const sw=g('d-swatch');sw.style.background=h;sw.style.color=fg;
+  sw.innerHTML=item.shade?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:28px">${cat.icon||'💄'}</span><span style="font-size:11px;font-weight:600;opacity:.85;letter-spacing:.02em;max-width:90%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.shade}</span></div>`:(cat.icon||'💄');
   const exp=expiryStatus(item.expiry);
   const isPf=PERFUME_TYPES.includes(item.type);
-  const rows=[['Category',cat.name],['Type',item.type||'—'],['Brand',item.brand||'—'],['Shade',item.shade||'—'],['Finish',item.finish||'—'],['Formula',item.formula||'—'],['Stock',item.stock||'—'],['Rating',item.rating||'—'],['Price paid',item.price||'—'],['Purchased',item.purchaseDate||'—'],['Expiry',item.expiry||(exp?`${item.expiry} (${exp.label})`:'—')],['Skin type',item.skin||'—'],['Store',item.store||'—'],['Favourite',item.favourite?'⭐ Yes':'No']];
+  const rows=[['Category',cat.name],['Type',item.type||'—'],['Brand',item.brand||'—'],['Shade',item.shade||'—'],['Finish',item.finish||'—'],['Formula',item.formula||'—'],['Stock',item.stock||'—'],['Rating',item.rating||'—'],['Price paid',item.price||'—'],['Purchased',item.purchaseDate||'—'],['Expiry',item.expiry||(exp?`${item.expiry} (${exp.label})`:'—')],['Store',item.store||'—'],['Favourite',item.favourite?'⭐ Yes':'No'],['Repurchase',item.repurchase?'🔁 Yes':'No']];
   const pfNotes=isPf&&(item.topNotes||item.midNotes||item.baseNotes)?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Scent profile</div><div style="display:flex;gap:16px">${item.topNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🌿</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Top</div><div style="font-size:12px">${item.topNotes}</div></div>`:''}${item.midNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🌸</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Middle</div><div style="font-size:12px">${item.midNotes}</div></div>`:''}${item.baseNotes?`<div style="flex:1;text-align:center"><div style="font-size:16px;margin-bottom:3px">🪵</div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Base</div><div style="font-size:12px">${item.baseNotes}</div></div>`:''}</div>${item.season?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">🗓️ ${item.season}</div>`:''}</div>`:'';
-  g('d-body').innerHTML=`${pfNotes}<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${rows.map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>${exp?`<div style="margin-bottom:10px"><span class="exp-badge ${exp.cls}">${exp.cls==='exp-expired'?'⚠️':'🗓️'} ${exp.label}</span></div>`:''} ${item.tags?.length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}`;
+  const colorLabel=item.color?`<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><div style="width:16px;height:16px;border-radius:50%;background:${h};border:1px solid rgba(0,0,0,.13);flex-shrink:0"></div><span style="font-size:12px;color:var(--text2)">${item.color}</span></div>`:'';
+  g('d-body').innerHTML=`${pfNotes}${colorLabel}<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${rows.map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>${exp?`<div style="margin-bottom:10px"><span class="exp-badge ${exp.cls}">${exp.cls==='exp-expired'?'⚠️':'🗓️'} ${exp.label}</span></div>`:''} ${item.tags?.length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}`;
   // Show move button and dim the current section's button
   const mb=g('d-move-btn');if(mb)mb.style.display='';
   const ob=g('d-owned-btn');if(ob){ob.style.display='';ob.textContent=item.owned===false?'↩ Mark as current':'📦 Previously owned';}
@@ -1180,6 +1193,45 @@ function openDetail(id){
   om('detail-modal');
 }
 function editItem(){cm('detail-modal');openAddItem(vItemId);}
+function rBrands(){
+  const cur=items.filter(i=>i.owned!==false);
+  const sr=(gv('brsrch')||'').toLowerCase();
+  const brandMap={};
+  cur.forEach(i=>{
+    const b=i.brand?.trim()||'Unknown';
+    if(!brandMap[b])brandMap[b]={name:b,items:[],totalSpend:0};
+    brandMap[b].items.push(i);
+    const p=parseFloat((i.price||'').replace(/[^0-9.]/g,''));
+    if(!isNaN(p))brandMap[b].totalSpend+=p;
+  });
+  let brands=Object.values(brandMap).sort((a,b)=>b.items.length-a.items.length);
+  if(sr)brands=brands.filter(b=>b.name.toLowerCase().includes(sr));
+  sCH(`<div class="ch"><div class="cht">Brands</div><div class="chs">${brands.length} brand${brands.length!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb"><div class="fbs"><input type="text" id="brsrch" placeholder="Search brands..." value="${sr.replace(/"/g,'&quot;')}" oninput="rBrands()"></div></div>`);
+  if(!cur.length){sCt(`<div class="empty"><div class="ei">🏷️</div><p>Add products with a brand name to see them here.</p></div>`);return;}
+  if(!brands.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No brands match.</p></div>`);return;}
+  const currencySymbol=cur.find(i=>i.price)?.price?.replace(/[0-9.,\s]/g,'')?.[0]||'';
+  sCt(`<div style="display:flex;flex-direction:column;gap:10px">${brands.map(brand=>{
+    const fp=brand.items.find(i=>(i.photoUrls||[]).length)?.photoUrls?.[0]||null;
+    const spend=brand.totalSpend>0?`${currencySymbol}${brand.totalSpend.toFixed(2)}`:'—';
+    const types=[...new Set(brand.items.map(i=>i.type).filter(Boolean))];
+    const repurchaseCount=brand.items.filter(i=>i.repurchase).length;
+    return`<div class="card" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${fp?`<div style="width:48px;height:48px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${fp}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:48px;height:48px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏷️</div>`}
+        <div style="flex:1;min-width:0">
+          <div class="cn">${brand.name}</div>
+          <div class="cs">${brand.items.length} product${brand.items.length!==1?'s':''}${spend!=='—'?' · '+spend:''}${repurchaseCount?' · 🔁 '+repurchaseCount:''}</div>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">▸</span>
+      </div>
+    </div>
+    <div style="display:none;padding:0 4px 4px">
+      <div class="grid">${brand.items.map(iCard).join('')}</div>
+    </div>`;
+  }).join('')}</div>`);
+}
+
 function rPast(){
   const past=items.filter(i=>i.owned===false);
   const makeup=past.filter(i=>!SKINCARE_TYPES.includes(i.type)&&!HAIRCARE_TYPES.includes(i.type)&&!PERFUME_TYPES.includes(i.type));
@@ -1230,7 +1282,7 @@ function setTypeMode(mode){
     <optgroup label="— Lips —"><option>Lipstick</option><option>Liquid lipstick</option><option>Lip liner</option><option>Lip gloss</option><option>Lip oil</option><option>Lip balm</option><option>Lip tint</option><option>Lip plumper</option><option>Lip stain</option></optgroup>
     <optgroup label="— Body —"><option>Body lotion</option><option>Body oil</option><option>Body scrub</option><option>Body SPF</option><option>Self-tanner</option><option>Gradual tan</option><option>Deodorant</option></optgroup>
     <optgroup label="— Nails —"><option>Nail polish</option><option>Gel polish</option><option>Nail treatment</option><option>Cuticle oil</option><option>Top coat</option><option>Base coat</option></optgroup>
-    <optgroup label="— Tools —"><option>Foundation brush</option><option>Powder brush</option><option>Blush brush</option><option>Contour brush</option><option>Eyeshadow brush</option><option>Liner brush</option><option>Blending brush</option><option>Fan brush</option><option>Beauty blender</option><option>Sponge</option><option>Eyelash curler</option><option>Tweezers</option><option>Face roller</option><option>Gua sha</option><option>Dermaplaner</option><option>LED mask</option><option>Facial steamer</option><option>Brush cleaner</option></optgroup>
+    <optgroup label="— Tools —"><option>Foundation brush</option><option>Powder brush</option><option>Blush brush</option><option>Contour brush</option><option>Eyeshadow brush</option><option>Liner brush</option><option>Blending brush</option><option>Fan brush</option><option>Beauty blender</option><option>Sponge</option><option>Eyelash curler</option><option>Tweezers</option><option>Face roller</option><option>Gua sha</option><option>Dermaplaner</option><option>LED mask</option><option>Facial steamer</option><option>Brush cleaner</option><option>Mirror</option></optgroup>
     <optgroup label="— Fragrance —"><option>Perfume</option><option>Eau de toilette</option><option>Body mist</option><option>Hair perfume</option></optgroup>
     <option>Other</option>`;
   const skincareOpts=`
@@ -1288,6 +1340,7 @@ function openAddItem(id=null,fromWish=null){
   if(item?.stock)g('f-stock').value=item.stock||'Full';
   if(item?.rating)g('f-rating').value=item.rating||'';
   g('f-fav').checked=!!(item?.favourite);
+  g('f-repurchase').checked=!!(item?.repurchase);
   eFromWish=fromWish?fromWish.id:null;
   piPhotos=[];piCover=0;g('f-photo').value='';g('fpp').innerHTML='';
   if(fromWish&&!id){piPhotos=[...(fromWish.photoUrls||[])];piCover=0;renderIPP();}
@@ -1349,7 +1402,7 @@ function saveItem(){
   const orderedPhotos=[...piPhotos];
   if(piCover>0&&piCover<orderedPhotos.length){orderedPhotos.unshift(orderedPhotos.splice(piCover,1)[0]);}
   const isPfType=PERFUME_TYPES.includes(gv('f-type'));
-  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now(),...(orig?.owned===false&&{owned:false}),...(isPfType&&{topNotes:gv('f-top').trim()||undefined,midNotes:gv('f-mid').trim()||undefined,baseNotes:gv('f-base').trim()||undefined,season:gv('f-season').trim()||undefined})};
+  const item={id:eItemId||mid(),name,type:gv('f-type'),category:gv('f-cat'),brand:gv('f-brand').trim(),shade:gv('f-shade').trim(),finish:gv('f-finish'),formula:gv('f-formula').trim(),price:gv('f-price').trim(),purchaseDate:gv('f-pdate'),expiry:gv('f-expiry'),stock:gv('f-stock'),rating:gv('f-rating'),skin:gv('f-skin').trim(),store:gv('f-store').trim(),color:gC()||'Clear/nude',favourite:g('f-fav').checked,repurchase:g('f-repurchase').checked,tags:gv('f-tags').split(',').map(t=>t.trim()).filter(Boolean),notes:gv('f-notes').trim(),photoUrls:[...orderedPhotos],addedAt:orig?.addedAt||Date.now(),updatedAt:Date.now(),...(orig?.owned===false&&{owned:false}),...(isPfType&&{topNotes:gv('f-top').trim()||undefined,midNotes:gv('f-mid').trim()||undefined,baseNotes:gv('f-base').trim()||undefined,season:gv('f-season').trim()||undefined})};
   if(eItemId)items=items.map(i=>i.id===eItemId?item:i);else items.push(item);
   // photos stored as Cloudinary URLs on item.photoUrls — saved to Firestore via persist()
   const wasEditing=eItemId;
