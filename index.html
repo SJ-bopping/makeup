@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 function startListeners(){
   _unsubs.forEach(u=>u());_unsubs=[];
-  let loaded={items:false,looks:false,wishlist:false,cats:false};
+  let loaded={items:false,looks:false,hairlooks:false,finalooks:false,wishlist:false,cats:false};
   function checkLoad(){
     if(Object.values(loaded).every(Boolean)){
       [50,200,500].forEach(ms=>setTimeout(()=>{
@@ -75,6 +75,8 @@ function startListeners(){
   });
   _unsubs.push(sub('items',d=>{items=d;},'items'));
   _unsubs.push(sub('looks',d=>{looks=d;},'looks'));
+  _unsubs.push(sub('hairlooks',d=>{hairlooks=d;},'hairlooks'));
+  _unsubs.push(sub('finalooks',d=>{finalooks=d;},'finalooks'));
   _unsubs.push(sub('wishlist',d=>{wishlist=d;},'wishlist'));
   _unsubs.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
 }
@@ -391,6 +393,8 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
     <div class="ns">
       <span class="nl">Organise</span>
       <button class="nb" id="nav-looks" onclick="nav('looks')"><span class="ni">✨</span>Looks<span class="nbg" id="b-looks">0</span></button>
+      <button class="nb" id="nav-hair" onclick="nav('hair')"><span class="ni">💇</span>Hair<span class="nbg" id="b-hair">0</span></button>
+      <button class="nb" id="nav-finalooks" onclick="nav('finalooks')"><span class="ni">🌟</span>Final Look<span class="nbg" id="b-finalooks">0</span></button>
       <button class="nb" id="nav-routines" onclick="nav('routines')"><span class="ni">🗓️</span>Routines</button>
       <button class="nb" id="nav-expiry" onclick="nav('expiry')"><span class="ni">📅</span>Expiry tracker</button>
     </div>
@@ -435,6 +439,8 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   <button class="mbtn" onclick="nav('past');closeMore()"><span style="font-size:18px">📦</span>Previously owned</button>
   <button class="mbtn" onclick="nav('favs');closeMore()"><span style="font-size:18px">⭐</span>Favourites</button>
   <button class="mbtn" onclick="nav('looks');closeMore()"><span style="font-size:18px">🎨</span>Looks</button>
+  <button class="mbtn" onclick="nav('hair');closeMore()"><span style="font-size:18px">💇</span>Hair</button>
+  <button class="mbtn" onclick="nav('finalooks');closeMore()"><span style="font-size:18px">🌟</span>Final Look</button>
   <button class="mbtn" onclick="nav('routines');closeMore()"><span style="font-size:18px">🗓️</span>Routines</button>
   <button class="mbtn" onclick="nav('brands');closeMore()"><span style="font-size:18px">🏷️</span>Brands</button>
   <button class="mbtn" onclick="nav('compare');closeMore()"><span style="font-size:18px">⚖️</span>Compare products</button>
@@ -560,6 +566,21 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   </div>
 </div>
 
+<!-- LOOK DETAIL MODAL -->
+<div class="ov" id="look-detail-modal" style="display:none" onclick="if(event.target===this)cm('look-detail-modal')">
+  <div class="modal">
+    <div class="mh"><h2 id="ld-name" style="font-family:'DM Serif Display',serif;font-size:18px;"></h2><button class="btn gh sm" onclick="cm('look-detail-modal')">✕</button></div>
+    <div class="mb">
+      <div id="ld-photos"></div>
+      <div id="ld-body"></div>
+    </div>
+    <div class="mf">
+      <button class="btn sm" onclick="cm('look-detail-modal')">Close</button>
+      <button class="btn sm pr" onclick="cm('look-detail-modal');openEditLook(vLookId)">Edit</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOOK MODAL -->
 <div class="ov" id="look-modal" style="display:none" onclick="if(event.target===this)cm('look-modal')">
   <div class="modal">
@@ -583,6 +604,98 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <button class="btn sm dn" id="ldel" style="display:none" onclick="delLook()">Delete</button>
       <button class="btn sm" onclick="cm('look-modal')">Cancel</button>
       <button class="btn sm pr" onclick="saveLook()">Save look</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL LOOK DETAIL MODAL -->
+<div class="ov" id="flook-detail-modal" style="display:none" onclick="if(event.target===this)cm('flook-detail-modal')">
+  <div class="modal">
+    <div class="mh"><h2 id="fld-name" style="font-family:'DM Serif Display',serif;font-size:18px;"></h2><button class="btn gh sm" onclick="cm('flook-detail-modal')">✕</button></div>
+    <div class="mb">
+      <div id="fld-photos"></div>
+      <div id="fld-body"></div>
+    </div>
+    <div class="mf">
+      <button class="btn sm" onclick="cm('flook-detail-modal')">Close</button>
+      <button class="btn sm pr" onclick="cm('flook-detail-modal');openEditFLook(vFLookId)">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL LOOK EDIT MODAL -->
+<div class="ov" id="flook-modal" style="display:none" onclick="if(event.target===this)cm('flook-modal')">
+  <div class="modal">
+    <div class="mh"><h2 id="flmt" style="font-family:'DM Serif Display',serif;">Add final look</h2><button class="btn gh sm" onclick="cm('flook-modal')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label>Look name *</label><input class="inp" id="flf-name" placeholder="e.g. Date night, Summer wedding"></div>
+      <div class="g2">
+        <div class="fr"><label>Date</label><input class="inp" type="date" id="flf-date"></div>
+        <div class="fr"><label>Occasion</label>
+          <select class="sel" id="flf-occ"><option value="">—</option><option>Everyday</option><option>Work</option><option>Night out</option><option>Date night</option><option>Wedding</option><option>Festival</option><option>Special event</option></select>
+        </div>
+      </div>
+      <div class="fr"><label>Photo</label>
+        <div id="flpp" style="margin-bottom:6px;"></div>
+        <input type="file" id="flf-photo" accept="image/*" multiple onchange="prevFLP(this)">
+      </div>
+      <div class="fr"><label>Makeup look</label>
+        <select class="sel" id="flf-look"><option value="">— None —</option></select>
+      </div>
+      <div class="fr"><label>Hair style</label>
+        <select class="sel" id="flf-hair"><option value="">— None —</option></select>
+      </div>
+      <div class="fr"><label>Perfume</label>
+        <select class="sel" id="flf-perfume"><option value="">— None —</option></select>
+      </div>
+      <div class="fr"><label>Notes</label><textarea class="txa" id="flf-notes" placeholder="Vibe, occasion details, inspo..."></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn sm dn" id="fldel" style="display:none" onclick="delFLook()">Delete</button>
+      <button class="btn sm" onclick="cm('flook-modal')">Cancel</button>
+      <button class="btn sm pr" onclick="saveFLook()">Save look</button>
+    </div>
+  </div>
+</div>
+
+<!-- HAIR LOOK DETAIL MODAL -->
+<div class="ov" id="hlook-detail-modal" style="display:none" onclick="if(event.target===this)cm('hlook-detail-modal')">
+  <div class="modal">
+    <div class="mh"><h2 id="hld-name" style="font-family:'DM Serif Display',serif;font-size:18px;"></h2><button class="btn gh sm" onclick="cm('hlook-detail-modal')">✕</button></div>
+    <div class="mb">
+      <div id="hld-photos"></div>
+      <div id="hld-body"></div>
+    </div>
+    <div class="mf">
+      <button class="btn sm" onclick="cm('hlook-detail-modal')">Close</button>
+      <button class="btn sm pr" onclick="cm('hlook-detail-modal');openEditHLook(vHLookId)">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- HAIR LOOK MODAL -->
+<div class="ov" id="hlook-modal" style="display:none" onclick="if(event.target===this)cm('hlook-modal')">
+  <div class="modal">
+    <div class="mh"><h2 id="hlmt" style="font-family:'DM Serif Display',serif;">Add hair look</h2><button class="btn gh sm" onclick="cm('hlook-modal')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label>Style name *</label><input class="inp" id="hlf-name" placeholder="e.g. Beachy waves, Sleek bun"></div>
+      <div class="g2">
+        <div class="fr"><label>Date</label><input class="inp" type="date" id="hlf-date"></div>
+        <div class="fr"><label>Occasion</label>
+          <select class="sel" id="hlf-occ"><option value="">—</option><option>Everyday</option><option>Work</option><option>Night out</option><option>Date night</option><option>Wedding</option><option>Festival</option><option>Special event</option></select>
+        </div>
+      </div>
+      <div class="fr"><label>Photo</label>
+        <div id="hlpp" style="margin-bottom:6px;"></div>
+        <input type="file" id="hlf-photo" accept="image/*" multiple onchange="prevHLP(this)">
+      </div>
+      <div class="fr"><label>Products used</label><div class="cw" id="hlpick"></div></div>
+      <div class="fr"><label>Notes</label><textarea class="txa" id="hlf-notes" placeholder="Technique, tips, inspo..."></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn sm dn" id="hldel" style="display:none" onclick="delHLook()">Delete</button>
+      <button class="btn sm" onclick="cm('hlook-modal')">Cancel</button>
+      <button class="btn sm pr" onclick="saveHLook()">Save style</button>
     </div>
   </div>
 </div>
@@ -822,11 +935,11 @@ const COLORS=[
   {n:'Peacock',h:'linear-gradient(135deg,#004D40,#006064,#1565C0,#4A148C)'},{n:'Lava',h:'linear-gradient(135deg,#FF4500,#FF8C00,#FFD700,#DC143C)'},
 ];
 
-let items=[],looks=[],wishlist=[],cats=[],routines=[];
+let items=[],looks=[],hairlooks=[],finalooks=[],wishlist=[],cats=[],routines=[];
 let view='all',gmode='grid';
 let eItemId=null,vItemId=null,eLookId=null,eCatId=null,eRoutineId=null,vRoutineId=null;
 let selLookItems=new Set(),selRoutineItems=[],piPhotos=[],plPhotos=[],pwPhotos=[],piCover=0;
-let eWishId=null,eFromWish=null;
+let eWishId=null,eFromWish=null,vLookId=null,eHLookId=null,vHLookId=null,phPhotos=[],selHLookItems=new Set(),eFLookId=null,vFLookId=null,pfPhotos=[];
 
 function mid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function isLight(h){if(!h||h.startsWith('linear'))return true;try{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000>155;}catch{return true;}}
@@ -856,7 +969,7 @@ async function uploadToCloudinary(dataUrl){
 
 function getPhotos(col,id){
   // Photos now stored as Cloudinary URLs on the item itself
-  const arr=col==='items'?items:col==='looks'?looks:[];
+  const arr=col==='items'?items:col==='looks'?looks:col==='hairlooks'?hairlooks:[];
   const obj=arr.find(x=>x.id===id);
   return obj?.photoUrls||[];
 }
@@ -881,7 +994,7 @@ function updateBadges(){
   s('b-synced',items.filter(i=>i.owned!==false).length);
   s('b-past',items.filter(i=>i.owned===false).length);
   s('b-favs',items.filter(i=>i.favourite&&i.owned!==false).length);
-  s('b-wish',wishlist.length);s('b-looks',looks.length);
+  s('b-wish',wishlist.length);s('b-looks',looks.length);s('b-hair',hairlooks.length);s('b-finalooks',finalooks.length);
   s('db-stat',cur.length+' product'+(cur.length!==1?'s':'')+' total · synced');
   setSyncDot('ok');
 }
@@ -1046,7 +1159,7 @@ async function persistDel(col,id){if(window.fbDel)await window.fbDel(col,id);}
 // ── VIEW CACHE ────────────────────────────────────────────────────────────────
 const _vcache={};
 let _vdirty=new Set();
-function invalidateCache(...views){views.length?views.forEach(v=>_vdirty.add(v)):_vdirty=new Set(['all','skincare','haircare','favs','wishlist','looks','routines','compare','expiry','stats','settings']);}
+function invalidateCache(...views){views.length?views.forEach(v=>_vdirty.add(v)):_vdirty=new Set(['all','skincare','haircare','hair','favs','wishlist','looks','routines','compare','expiry','stats','settings','hairlooks','finalooks']);}
 
 function nav(v){
   view=v;
@@ -1061,6 +1174,8 @@ function renderCurrent(){
     if(view==='all')rItems(false);
     else if(view==='skincare')rSkincare();
     else if(view==='haircare')rHaircare();
+    else if(view==='hair')rHairLooks();
+    else if(view==='finalooks')rFinaLooks();
     else if(view==='perfume')rPerfume();
     else if(view==='synced')rAll();
     else if(view==='past')rPast();
@@ -1431,7 +1546,7 @@ function rLooks(){
   sCt(`<div class="glg">${list.map(l=>{
     const photos=l.photoUrls||[];const fp=photos[0]||null;
     const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
-    return`<div class="pc" onclick="openEditLook('${l.id}')">
+    return`<div class="pc" onclick="openLookDetail('${l.id}')">
       <div class="pt">${fp?`<img src="${fp}" alt="" loading="lazy">`:'✨'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
       </div>
       <div class="pb">
@@ -1442,6 +1557,18 @@ function rLooks(){
   }).join('')}</div>`);
 }
 
+function openLookDetail(id){
+  vLookId=id;
+  const l=looks.find(x=>x.id===id);if(!l)return;
+  const photos=l.photoUrls||[];
+  g('ld-name').textContent=l.name;
+  g('ld-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:380px;':'height:200px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
+  const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+  const prodHtml=prods.length?`<div style="margin-bottom:13px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Products used</div><div style="display:flex;flex-wrap:wrap;gap:7px">${prods.map(p=>{const ph=(p.photoUrls||[])[0];const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};return`<div onclick="cm('look-detail-modal');openDetail('${p.id}')" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;width:54px">${ph?`<img src="${ph}" title="${p.name}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(0,0,0,.08)" loading="lazy">`:`<div title="${p.name}" style="width:48px;height:48px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💄'}</div>`}<span style="font-size:9px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;max-width:54px">${p.name}</span></div>`;}).join('')}</div></div>`:'';
+  const meta=[l.date?`🗓️ ${l.date}`:'',l.occasion?`✨ ${l.occasion}`:''].filter(Boolean).join(' · ');
+  g('ld-body').innerHTML=`${meta?`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">${meta}</div>`:''}${prodHtml}${l.notes?`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Notes</div><p style="font-size:13px;color:var(--text2);line-height:1.65;margin:0">${l.notes}</p>`:''}`;
+  om('look-detail-modal');
+}
 function openAddLook(){eLookId=null;selLookItems=new Set();plPhotos=[];g('lmt').textContent='Add look';g('ldel').style.display='none';['lf-name','lf-notes'].forEach(id=>g(id).value='');g('lf-date').value=new Date().toISOString().split('T')[0];g('lf-occ').value='';g('lf-photo').value='';g('lpp').innerHTML='';buildLookPicker();om('look-modal');}
 function openEditLook(id){const l=looks.find(x=>x.id===id);if(!l)return;eLookId=id;selLookItems=new Set(l.items||[]);plPhotos=[...(l.photoUrls||[])];g('lmt').textContent='Edit look';g('ldel').style.display='';g('lf-name').value=l.name;g('lf-date').value=l.date||'';g('lf-occ').value=l.occasion||'';g('lf-notes').value=l.notes||'';g('lf-photo').value='';renderLPP();buildLookPicker();om('look-modal');}
 async function prevLP(inp){
@@ -1491,6 +1618,153 @@ function saveLook(){
   showToast(isNew?'Look saved ✓':'Look updated ✓');persist('looks',look);
 }
 function delLook(){if(!eLookId||!confirm('Delete this look?'))return;const id=eLookId;looks=looks.filter(l=>l.id!==id);cm('look-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('looks',id);}
+
+// ── HAIR LOOKS ────────────────────────────────────────────────────────────────
+function rHairLooks(){
+  sCH(`<div class="ch"><div class="cht">Hair</div><div class="chs">${hairlooks.length} style${hairlooks.length!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb"><div class="fbs"><input type="text" id="hlsrch" placeholder="Search styles..." oninput="rHairLooks()"></div><button class="btn sm pr" onclick="openAddHLook()" style="margin-left:auto">+ Add style</button></div>`);
+  const sr=gv('hlsrch').toLowerCase();
+  const list=hairlooks.filter(l=>!sr||l.name.toLowerCase().includes(sr)).sort((a,b)=>b.createdAt-a.createdAt);
+  if(!list.length){sCt(`<div class="empty"><div class="ei">💇</div><p>${hairlooks.length?'No styles match.':'Log your hair styles here!'}</p></div>`);return;}
+  sCt(`<div class="glg">${list.map(l=>{
+    const photos=l.photoUrls||[];const fp=photos[0]||null;
+    const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+    return`<div class="pc" onclick="openHLookDetail('${l.id}')">
+      <div class="pt">${fp?`<img src="${fp}" alt="" loading="lazy">`:'💇'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
+      </div>
+      <div class="pb">
+        <div class="cn">${l.name}</div>
+        ${l.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l.occasion}</div>`:''}
+        ${prods.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${prods.map(p=>{const ph=(p.photoUrls||[])[0];const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};return ph?`<img src="${ph}" title="${p.name}" style="width:30px;height:30px;border-radius:6px;object-fit:cover;border:1px solid rgba(0,0,0,.08)" loading="lazy">`:`<div title="${p.name}" style="width:30px;height:30px;border-radius:6px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💇'}</div>`;}).join('')}</div>`:`<div style="font-size:11px;color:var(--text3);margin-bottom:5px">No products tagged</div>`}
+      </div></div>`;
+  }).join('')}</div>`);
+}
+
+function openHLookDetail(id){
+  vHLookId=id;
+  const l=hairlooks.find(x=>x.id===id);if(!l)return;
+  const photos=l.photoUrls||[];
+  g('hld-name').textContent=l.name;
+  g('hld-photos').innerHTML=photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&photos.length===1?'max-height:380px;':'height:200px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
+  const prods=(l.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+  const prodHtml=prods.length?`<div style="margin-bottom:13px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Products used</div><div style="display:flex;flex-wrap:wrap;gap:7px">${prods.map(p=>{const ph=(p.photoUrls||[])[0];const h=hx(p.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===p.category)||{};return`<div onclick="cm('hlook-detail-modal');openDetail('${p.id}')" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;width:54px">${ph?`<img src="${ph}" title="${p.name}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(0,0,0,.08)" loading="lazy">`:`<div title="${p.name}" style="width:48px;height:48px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'💇'}</div>`}<span style="font-size:9px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;max-width:54px">${p.name}</span></div>`;}).join('')}</div></div>`:'';
+  const meta=[l.date?`🗓️ ${l.date}`:'',l.occasion?`✨ ${l.occasion}`:''].filter(Boolean).join(' · ');
+  g('hld-body').innerHTML=`${meta?`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">${meta}</div>`:''}${prodHtml}${l.notes?`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Notes</div><p style="font-size:13px;color:var(--text2);line-height:1.65;margin:0">${l.notes}</p>`:''}`;
+  om('hlook-detail-modal');
+}
+function openAddHLook(){eHLookId=null;selHLookItems=new Set();phPhotos=[];g('hlmt').textContent='Add hair style';g('hldel').style.display='none';['hlf-name','hlf-notes'].forEach(id=>g(id).value='');g('hlf-date').value=new Date().toISOString().split('T')[0];g('hlf-occ').value='';g('hlf-photo').value='';g('hlpp').innerHTML='';buildHLookPicker();om('hlook-modal');}
+function openEditHLook(id){const l=hairlooks.find(x=>x.id===id);if(!l)return;eHLookId=id;selHLookItems=new Set(l.items||[]);phPhotos=[...(l.photoUrls||[])];g('hlmt').textContent='Edit hair style';g('hldel').style.display='';g('hlf-name').value=l.name;g('hlf-date').value=l.date||'';g('hlf-occ').value=l.occasion||'';g('hlf-notes').value=l.notes||'';g('hlf-photo').value='';renderHLPP();buildHLookPicker();om('hlook-modal');}
+async function prevHLP(inp){const files=Array.from(inp.files);const d=document.createElement('div');d.style.cssText='padding:8px;font-size:12px;color:var(--text3)';d.textContent='Uploading...';g('hlpp').appendChild(d);for(const f of files){try{const du=await f2b(f);const u=await uploadToCloudinary(du);phPhotos.push(u);}catch(e){showToast('Upload failed');}}inp.value='';renderHLPP();}
+function renderHLPP(){const el=g('hlpp');if(!phPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${phPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="phPhotos.splice(${i},1);renderHLPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
+function buildHLookPicker(){
+  const el=g('hlpick');
+  const hcItems=items.filter(i=>HAIRCARE_TYPES.includes(i.type)&&i.owned!==false);
+  if(!hcItems.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Add haircare products first.</span>';return;}
+  const types=[...new Set(hcItems.map(i=>i.type).filter(Boolean))].sort();
+  const grouped={};
+  hcItems.forEach(item=>{const t=item.type||'Other';if(!grouped[t])grouped[t]=[];grouped[t].push(item);});
+  el.innerHTML=Object.entries(grouped).map(([t,its])=>
+    `<div style="width:100%;margin:4px 0 2px"><span style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">💇 ${t}</span></div>`+
+    its.map(item=>`<span class="chip ${selHLookItems.has(item.id)?'on':''}" onclick="togHLI('${item.id}',this)">${item.name}</span>`).join('')
+  ).join('');
+}
+function togHLI(id,el){if(selHLookItems.has(id)){selHLookItems.delete(id);el.classList.remove('on');}else{selHLookItems.add(id);el.classList.add('on');}}
+function saveHLook(){
+  const name=gv('hlf-name').trim();if(!name){showToast('Please enter a name.');return;}
+  const isNew=!eHLookId;
+  const look={id:eHLookId||mid(),name,items:[...selHLookItems],date:gv('hlf-date'),occasion:gv('hlf-occ'),notes:gv('hlf-notes').trim(),photoUrls:[...phPhotos],createdAt:eHLookId?(hairlooks.find(l=>l.id===eHLookId)||{}).createdAt||Date.now():Date.now(),updatedAt:Date.now()};
+  if(eHLookId)hairlooks=hairlooks.map(l=>l.id===eHLookId?look:l);else hairlooks.push(look);
+  cm('hlook-modal');updateBadges();renderCurrent();
+  showToast(isNew?'Style saved ✓':'Style updated ✓');persist('hairlooks',look);
+}
+function delHLook(){if(!eHLookId||!confirm('Delete this style?'))return;const id=eHLookId;hairlooks=hairlooks.filter(l=>l.id!==id);cm('hlook-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('hairlooks',id);}
+
+// ── FINAL LOOKS ───────────────────────────────────────────────────────────────
+function rFinaLooks(){
+  sCH(`<div class="ch"><div class="cht">Final Look</div><div class="chs">${finalooks.length} look${finalooks.length!==1?'s':''}</div></div>`);
+  sFB(`<div class="fb"><div class="fbs"><input type="text" id="flsrch" placeholder="Search looks..." oninput="rFinaLooks()"></div><button class="btn sm pr" onclick="openAddFLook()" style="margin-left:auto">+ Add look</button></div>`);
+  const sr=gv('flsrch').toLowerCase();
+  const list=finalooks.filter(l=>!sr||l.name.toLowerCase().includes(sr)).sort((a,b)=>b.createdAt-a.createdAt);
+  if(!list.length){sCt(`<div class="empty"><div class="ei">🌟</div><p>${finalooks.length?'No looks match.':'Combine a makeup look, hair style & perfume!'}</p></div>`);return;}
+  sCt(`<div class="glg">${list.map(fl=>{
+    const photos=fl.photoUrls||[];const fp=photos[0]||null;
+    const mk=looks.find(l=>l.id===fl.lookId);
+    const hr=hairlooks.find(l=>l.id===fl.hairId);
+    const pf=items.find(i=>i.id===fl.perfumeId);
+    // Cover: own photo first, else makeup look photo, else hair style photo
+    const cover=fp||(mk?.photoUrls||[])[0]||(hr?.photoUrls||[])[0]||null;
+    return`<div class="pc" onclick="openFLookDetail('${fl.id}')">
+      <div class="pt">${cover?`<img src="${cover}" alt="" loading="lazy">`:'🌟'}${photos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${photos.length}</span>`:''}
+      </div>
+      <div class="pb">
+        <div class="cn">${fl.name}</div>
+        ${fl.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${fl.occasion}</div>`:''}
+        <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:4px">
+          ${mk?`<div style="font-size:11px;color:var(--text2)">✨ ${mk.name}</div>`:''}
+          ${hr?`<div style="font-size:11px;color:var(--text2)">💇 ${hr.name}</div>`:''}
+          ${pf?`<div style="font-size:11px;color:var(--text2)">🌸 ${pf.name}</div>`:''}
+        </div>
+      </div></div>`;
+  }).join('')}</div>`);
+}
+
+function openFLookDetail(id){
+  vFLookId=id;
+  const fl=finalooks.find(x=>x.id===id);if(!fl)return;
+  const photos=fl.photoUrls||[];
+  const mk=looks.find(l=>l.id===fl.lookId);
+  const hr=hairlooks.find(l=>l.id===fl.hairId);
+  const pf=items.find(i=>i.id===fl.perfumeId);
+  const cover=photos[0]||(mk?.photoUrls||[])[0]||(hr?.photoUrls||[])[0]||null;
+  const allPhotos=photos.length?photos:[cover].filter(Boolean);
+  g('fld-name').textContent=fl.name;
+  g('fld-photos').innerHTML=allPhotos.length?`<div style="display:grid;grid-template-columns:${allPhotos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${allPhotos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&allPhotos.length===1?'max-height:380px;':'height:200px;'}object-fit:cover" loading="lazy">`).join('')}</div>`:'';
+  const meta=[fl.date?`🗓️ ${fl.date}`:'',fl.occasion?`✨ ${fl.occasion}`:''].filter(Boolean).join(' · ');
+  // Makeup look section
+  const mkSection=mk?`<div style="margin-bottom:13px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">✨ Makeup look</div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer" onclick="cm('flook-detail-modal');openLookDetail('${mk.id}')">
+      ${(mk.photoUrls||[])[0]?`<img src="${mk.photoUrls[0]}" style="width:44px;height:44px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:7px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">✨</div>`}
+      <div style="flex:1;min-width:0"><div class="cn">${mk.name}</div>${mk.occasion?`<div class="cs">${mk.occasion}</div>`:''}</div>
+      <span style="font-size:12px;color:var(--text3)">›</span>
+    </div></div>`:'';
+  // Hair style section
+  const hrSection=hr?`<div style="margin-bottom:13px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">💇 Hair style</div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer" onclick="cm('flook-detail-modal');openHLookDetail('${hr.id}')">
+      ${(hr.photoUrls||[])[0]?`<img src="${hr.photoUrls[0]}" style="width:44px;height:44px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:7px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💇</div>`}
+      <div style="flex:1;min-width:0"><div class="cn">${hr.name}</div>${hr.occasion?`<div class="cs">${hr.occasion}</div>`:''}</div>
+      <span style="font-size:12px;color:var(--text3)">›</span>
+    </div></div>`:'';
+  // Perfume section
+  const pfSection=pf?`<div style="margin-bottom:13px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🌸 Perfume</div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer" onclick="cm('flook-detail-modal');openDetail('${pf.id}')">
+      ${(pf.photoUrls||[])[0]?`<img src="${pf.photoUrls[0]}" style="width:44px;height:44px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:7px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🌸</div>`}
+      <div style="flex:1;min-width:0"><div class="cn">${pf.name}</div>${pf.brand?`<div class="cs">${pf.brand}</div>`:''}</div>
+      <span style="font-size:12px;color:var(--text3)">›</span>
+    </div></div>`:'';
+  g('fld-body').innerHTML=`${meta?`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">${meta}</div>`:''}${mkSection}${hrSection}${pfSection}${fl.notes?`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Notes</div><p style="font-size:13px;color:var(--text2);line-height:1.65;margin:0">${fl.notes}</p>`:''}`;
+  om('flook-detail-modal');
+}
+
+function _flPopulateSelects(){
+  const lSel=g('flf-look');const hSel=g('flf-hair');const pSel=g('flf-perfume');
+  lSel.innerHTML=`<option value="">— None —</option>`+looks.map(l=>`<option value="${l.id}">${l.name}${l.occasion?' · '+l.occasion:''}</option>`).join('');
+  hSel.innerHTML=`<option value="">— None —</option>`+hairlooks.map(l=>`<option value="${l.id}">${l.name}${l.occasion?' · '+l.occasion:''}</option>`).join('');
+  const perfs=items.filter(i=>PERFUME_TYPES.includes(i.type)&&i.owned!==false);
+  pSel.innerHTML=`<option value="">— None —</option>`+perfs.map(p=>`<option value="${p.id}">${p.name}${p.brand?' · '+p.brand:''}</option>`).join('');
+}
+function openAddFLook(){eFLookId=null;pfPhotos=[];g('flmt').textContent='Add final look';g('fldel').style.display='none';['flf-name','flf-notes'].forEach(id=>g(id).value='');g('flf-date').value=new Date().toISOString().split('T')[0];g('flf-occ').value='';g('flf-photo').value='';g('flpp').innerHTML='';_flPopulateSelects();om('flook-modal');}
+function openEditFLook(id){const fl=finalooks.find(x=>x.id===id);if(!fl)return;eFLookId=id;pfPhotos=[...(fl.photoUrls||[])];g('flmt').textContent='Edit final look';g('fldel').style.display='';g('flf-name').value=fl.name;g('flf-date').value=fl.date||'';g('flf-occ').value=fl.occasion||'';g('flf-notes').value=fl.notes||'';g('flf-photo').value='';renderFLPP();_flPopulateSelects();g('flf-look').value=fl.lookId||'';g('flf-hair').value=fl.hairId||'';g('flf-perfume').value=fl.perfumeId||'';om('flook-modal');}
+async function prevFLP(inp){const files=Array.from(inp.files);const d=document.createElement('div');d.style.cssText='padding:8px;font-size:12px;color:var(--text3)';d.textContent='Uploading...';g('flpp').appendChild(d);for(const f of files){try{const du=await f2b(f);const u=await uploadToCloudinary(du);pfPhotos.push(u);}catch(e){showToast('Upload failed');}}inp.value='';renderFLPP();}
+function renderFLPP(){const el=g('flpp');if(!pfPhotos.length){el.innerHTML='';return;}el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${pfPhotos.map((p,i)=>`<div style="position:relative;width:72px;height:72px"><img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><button onclick="pfPhotos.splice(${i},1);renderFLPP()" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}</div>`;}
+function saveFLook(){
+  const name=gv('flf-name').trim();if(!name){showToast('Please enter a name.');return;}
+  const isNew=!eFLookId;
+  const fl={id:eFLookId||mid(),name,lookId:gv('flf-look')||null,hairId:gv('flf-hair')||null,perfumeId:gv('flf-perfume')||null,date:gv('flf-date'),occasion:gv('flf-occ'),notes:gv('flf-notes').trim(),photoUrls:[...pfPhotos],createdAt:eFLookId?(finalooks.find(l=>l.id===eFLookId)||{}).createdAt||Date.now():Date.now(),updatedAt:Date.now()};
+  if(eFLookId)finalooks=finalooks.map(l=>l.id===eFLookId?fl:l);else finalooks.push(fl);
+  cm('flook-modal');updateBadges();renderCurrent();
+  showToast(isNew?'Look saved ✓':'Look updated ✓');persist('finalooks',fl);
+}
+function delFLook(){if(!eFLookId||!confirm('Delete this look?'))return;const id=eFLookId;finalooks=finalooks.filter(l=>l.id!==id);cm('flook-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('finalooks',id);}
 
 // ── WISHLIST ──────────────────────────────────────────────────────────────────
 function rWishlist(){
