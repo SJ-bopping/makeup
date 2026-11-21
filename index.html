@@ -406,6 +406,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
     </div>
     <div class="ns">
       <span class="nl">Manage</span>
+      <button class="nb" id="nav-glossary" onclick="nav('glossary')"><span class="ni">📖</span>Glossary</button>
       <button class="nb" id="nav-settings" onclick="nav('settings')"><span class="ni">⚙️</span>Settings</button>
     </div>
     <div class="sf">
@@ -447,6 +448,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   <button class="mbtn" onclick="nav('wishlist');closeMore()"><span style="font-size:18px">🌟</span>Wishlist</button>
   <button class="mbtn" onclick="nav('expiry');closeMore()"><span style="font-size:18px">📅</span>Expiry tracker</button>
   <button class="mbtn" onclick="nav('stats');closeMore()"><span style="font-size:18px">📊</span>Insights</button>
+  <button class="mbtn" onclick="nav('glossary');closeMore()"><span style="font-size:18px">📖</span>Glossary</button>
   <button class="mbtn" onclick="nav('settings');closeMore()"><span style="font-size:18px">⚙️</span>Settings</button>
   <button class="mbtn" onclick="window._fbSignOut();closeMore()"><span style="font-size:18px">🚪</span>Sign out</button>
 </div>
@@ -1188,6 +1190,7 @@ function renderCurrent(){
     else if(view==='expiry')rExpiry();
     else if(view==='stats')rStats();
     else if(view==='settings')rSettings();
+    else if(view==='glossary')rGlossary();
   });
 }
 
@@ -1830,6 +1833,168 @@ function rStats(){
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
+function rGlossary(){
+  const sr=(gv('glsrch')||'').toLowerCase();
+  const GLOSSARY=[
+    {cat:'Finish',icon:'✨',terms:[
+      {t:'Matte',d:'No shine or shimmer. Absorbs light for a flat, velvety look. Great for oily skin and bold lip colours.'},
+      {t:'Satin',d:'Soft, low-shine finish between matte and dewy. Looks natural and healthy on most skin types.'},
+      {t:'Dewy',d:'Luminous, skin-like glow that mimics hydrated skin. Suits dry or normal skin; can look oily on combination/oily skin.'},
+      {t:'Glowy',d:'Lit-from-within radiance, more subtle than shimmer. Achieved with luminous primers, skin tints or highlighters.'},
+      {t:'Shimmer',d:'Contains fine reflective particles that catch light. Ranges from subtle glow to bold sparkle.'},
+      {t:'Glitter',d:'Larger, chunkier reflective particles than shimmer. Usually pressed or loose and used for eyes, lips or body.'},
+      {t:'Metallic',d:'High-shine, mirror-like finish. Common in eyeshadows, lip glosses and highlighters.'},
+      {t:'Duo-chrome',d:'Shifts between two colours depending on the angle of light. Created with special pigments that reflect different wavelengths.'},
+      {t:'Holographic',d:'Reflects rainbow colours from multiple angles. Contains prismatic particles that disperse light.'},
+      {t:'Frosted',d:'Pearlescent, icy shine with cool undertones. Common in 90s-era eyeshadows and lip shades.'},
+      {t:'Luminous',d:'Soft all-over glow without obvious shimmer particles. Gives skin a healthy, radiant appearance.'},
+      {t:'Pearlescent',d:'Soft, pearl-like sheen with an iridescent quality. More subtle than metallic, often with pink or champagne tones.'},
+      {t:'Opalescent',d:'Soft, shifting iridescence like an opal — white base with hints of multiple colours.'},
+      {t:'Velvet',d:'Rich, soft-focus matte with a slight texture. Associated with luxurious depth in lip and eye products.'},
+    ]},
+    {cat:'Formula',icon:'🧪',terms:[
+      {t:'Liquid',d:'Water or oil-based fluid formula. Covers liquids foundations, eyeliners, blushers and lipsticks. Usually buildable coverage.'},
+      {t:'Cream',d:'Soft, blendable texture between liquid and solid. Creamy products are often hydrating and blend easily with fingers or a sponge.'},
+      {t:'Powder',d:'Dry, finely milled formula. Can be loose or pressed. Sets makeup, controls shine and can be built up in layers.'},
+      {t:'Balm',d:'Waxy, thick formula that melts on contact with skin. Usually conditioning and moisturising — common in lip products.'},
+      {t:'Gel',d:'Clear or translucent, water-based formula. Sets to a flexible hold. Common in brow gels, eyeliners and setting gels.'},
+      {t:'Mousse',d:'Whipped, airy texture that feels light on skin. Used in foundations, blushers and setting products.'},
+      {t:'Serum',d:'Lightweight, high-concentration formula with active ingredients. Used in skincare but also in hybrid makeup-skincare products.'},
+      {t:'Oil',d:'Lipid-based formula. Can be a finish product (face oil) or an ingredient in foundations and lip oils for hydration and shine.'},
+      {t:'Stick',d:'Solid formula in a push-up or twist-up format. Convenient for travel; includes foundation, concealer, contour and blush sticks.'},
+      {t:'Tint',d:'Sheer, buildable colour with minimal coverage. Stains or lightly colours — common in lip tints, cheek tints and skin tints.'},
+      {t:'Transfer-proof',d:'Formula designed to resist smudging or transferring onto clothes, cups or skin. Usually contains polymers or silicones.'},
+      {t:'Long-wear',d:'Formulated to last 8–24 hours without significant fading, creasing or oxidising. Often contains film-forming agents.'},
+      {t:'Buildable',d:'Can be layered for more coverage or intensity without becoming cakey or unnatural-looking.'},
+      {t:'Blendable',d:'Blurs easily into skin or other products. Important for seamless application of contour, blush and eyeshadow.'},
+    ]},
+    {cat:'Coverage',icon:'🎨',terms:[
+      {t:'Sheer',d:'Very light coverage — evens skin tone slightly while letting natural skin texture show through. Good for minimal-makeup looks.'},
+      {t:'Light',d:'Covers minor redness and discolouration while still appearing very natural. Buildable to medium coverage.'},
+      {t:'Medium',d:'Covers most blemishes, discolouration and uneven skin tone. The most versatile coverage level.'},
+      {t:'Full',d:'Covers blemishes, scarring, discolouration and redness completely. Can look heavy if over-applied.'},
+      {t:'Buildable',d:'Formula that starts sheer or light but can be layered to achieve medium or full coverage without caking.'},
+      {t:'Natural finish',d:'Leaves skin looking like skin — not perfectly smooth or completely matte, but healthy and even.'},
+    ]},
+    {cat:'Undertones',icon:'🎨',terms:[
+      {t:'Warm undertone',d:'Yellow, peachy or golden undertones in the skin. Looks best in gold jewellery. Veins appear greenish.'},
+      {t:'Cool undertone',d:'Pink, red or bluish undertones in the skin. Looks best in silver jewellery. Veins appear blue or purple.'},
+      {t:'Neutral undertone',d:'A mix of warm and cool. Can wear both gold and silver. Suits a wide range of foundation shades.'},
+      {t:'Olive undertone',d:'Greenish, muted undertone common in Mediterranean, Middle Eastern and some Asian skin. Can be warm or neutral.'},
+      {t:'Oxidation',d:'When a foundation or concealer darkens after application due to skin oils and air reacting with the formula. Common with matte foundations.'},
+      {t:'Colour theory',d:'Understanding how colours interact. Opposite colours on the colour wheel cancel each other — green concealer neutralises redness, peach/orange conceals dark circles.'},
+    ]},
+    {cat:'Skin Type',icon:'💧',terms:[
+      {t:'Oily',d:'Produces excess sebum throughout the day. Prone to shine, enlarged pores and breakouts. Benefits from matte, oil-free formulas.'},
+      {t:'Dry',d:'Lacks moisture and/or oil. Can appear dull, flaky or tight. Benefits from hydrating, dewy and cream formulas.'},
+      {t:'Combination',d:'Oily in the T-zone (forehead, nose, chin) and normal to dry on the cheeks. Most common skin type.'},
+      {t:'Normal',d:'Balanced oil and moisture levels. Few blemishes, minimal sensitivity and small pores. Most formulas work well.'},
+      {t:'Sensitive',d:'Reacts easily to ingredients, temperature or friction. Prone to redness, itching or burning. Suits fragrance-free, hypoallergenic formulas.'},
+      {t:'Acne-prone',d:'Regularly develops breakouts. Benefits from non-comedogenic (won\'t clog pores) formulas.'},
+      {t:'Mature',d:'Shows signs of ageing — fine lines, loss of firmness or elasticity. Benefits from hydrating, luminous formulas that don\'t settle into lines.'},
+      {t:'Non-comedogenic',d:'Formulated to not clog pores. Important for oily and acne-prone skin types.'},
+    ]},
+    {cat:'Eye Makeup',icon:'👁️',terms:[
+      {t:'Cut crease',d:'Technique where the eyeshadow in the crease is blended sharply and precisely — often with concealer — to create a defined cut line.'},
+      {t:'Blending',d:'Diffusing edges of eyeshadow to remove harsh lines and create a seamless gradient.'},
+      {t:'Transition shade',d:'A mid-tone, matte shade applied to the crease to create a natural-looking gradient between the lid and brow bone.'},
+      {t:'Brow bone',d:'The raised bone just beneath the eyebrow. Often highlighted to lift and open the eye area.'},
+      {t:'Waterline',d:'The inner rim of the eyelid (above the lower lash line). Lining here makes eyes appear smaller (dark liner) or larger (white/nude liner).'},
+      {t:'Tightlining',d:'Applying eyeliner between the lashes at the upper waterline to give the appearance of fuller, thicker lashes.'},
+      {t:'Smudge',d:'Intentionally blending eyeliner while wet for a smoky, diffused effect.'},
+      {t:'Inner corner highlight',d:'A shimmery or light shade applied to the inner corner of the eye to brighten and open the eyes.'},
+      {t:'Halo eye',d:'Eyeshadow technique where a light/shimmer shade is placed in the centre of the lid, with darker shades at the inner and outer corners.'},
+      {t:'Fox eye',d:'Technique using liner and eyeshadow to elongate the outer corner of the eye upward, creating a lifted, feline look.'},
+    ]},
+    {cat:'Lip',icon:'💋',terms:[
+      {t:'Lip liner',d:'Pencil used to define the lip line, prevent feathering and help lip colour last longer. Can be matched to lipstick or used as an all-over base.'},
+      {t:'Feathering',d:'When lip product bleeds into the fine lines around the mouth. Prevented by lip liner or setting powder.'},
+      {t:'Overlining',d:'Applying lip liner slightly outside the natural lip line to create the appearance of fuller lips.'},
+      {t:'Lip stain',d:'Lightweight tinted formula that stains the lips and lasts for hours without feeling heavy or dry.'},
+      {t:'Gloss',d:'High-shine, usually non-sticky lip product that makes lips appear fuller and more luminous.'},
+      {t:'Plumping',d:'Lip products containing ingredients like peppermint, capsicum or hyaluronic acid that temporarily increase lip volume by causing slight swelling.'},
+    ]},
+    {cat:'Complexion',icon:'🧴',terms:[
+      {t:'Primer',d:'Applied before foundation to smooth skin texture, control oil, blur pores and help makeup last longer.'},
+      {t:'Foundation',d:'Base makeup that evens skin tone and provides coverage. Available in liquid, powder, cream, stick and serum formulas.'},
+      {t:'Concealer',d:'Higher-coverage formula used to cover specific areas — blemishes, dark circles, redness — before or after foundation.'},
+      {t:'Colour corrector',d:'Concealer in a non-skin tone (green, peach, lavender, yellow) used to neutralise specific discolorations before applying concealer or foundation.'},
+      {t:'Setting powder',d:'Translucent or tinted powder applied over foundation to set it in place, control shine and extend wear.'},
+      {t:'Setting spray',d:'Fine mist applied over finished makeup to lock it in place, melt powdery textures together and extend wear.'},
+      {t:'Contour',d:'Applying a shade darker than your skin tone to recede areas and create definition — typically under cheekbones, jaw, nose and temples.'},
+      {t:'Highlight',d:'Applying a shade lighter than your skin tone or a shimmer to bring forward areas and reflect light — cheekbones, brow bone, cupid\'s bow.'},
+      {t:'Blush',d:'Colour applied to the cheeks to add warmth, life and dimension. Can be powder, cream, liquid or stick.'},
+      {t:'Bronzer',d:'Warm-toned powder or cream that adds sun-kissed warmth to the face. Differs from contour in that it warms rather than sculpts.'},
+      {t:'Baking',d:'Applying a thick layer of translucent powder under the eyes and on the T-zone, leaving it to sit while body heat sets the foundation beneath, then dusting away the excess.'},
+      {t:'Baking',d:'Applying a thick layer of translucent powder and leaving it for several minutes before brushing away, used to set and brighten the under-eye area.'},
+      {t:'Colour grading',d:'Strategically layering warm and cool products to add depth and dimension to the face, as opposed to flat application.'},
+    ]},
+    {cat:'Tools & Application',icon:'🖌️',terms:[
+      {t:'Stippling',d:'Dabbing product onto skin in a bouncing motion rather than rubbing or swiping. Builds coverage while maintaining texture.'},
+      {t:'Buffing',d:'Circular motions used to blend powder or foundation seamlessly into skin. Usually done with a dense, fluffy brush.'},
+      {t:'Patting',d:'Pressing product into skin without dragging. Best for under-eye concealer and setting powder — reduces creasing.'},
+      {t:'Beauty sponge',d:'Damp foam applicator (e.g. Beautyblender) used to apply and blend liquid foundation, concealer and cream products for a natural finish.'},
+      {t:'Kabuki brush',d:'Short, dense brush with tightly packed bristles. Used for buffing powder products into skin.'},
+      {t:'Fan brush',d:'Thin, spread-out brush used for applying highlighter, bronzer or sweeping away excess powder.'},
+      {t:'Flat shader brush',d:'Flat, dense brush for packing eyeshadow onto the lid.'},
+      {t:'Fluffy blending brush',d:'Soft, dome-shaped brush for blending eyeshadow in the crease and diffusing edges.'},
+      {t:'Damp sponge technique',d:'Using a wet beauty sponge to apply foundation gives a more skin-like, sheer finish than a dry sponge.'},
+    ]},
+    {cat:'Skincare & Ingredients',icon:'🌿',terms:[
+      {t:'Hyaluronic acid',d:'Humectant that attracts and retains moisture in the skin. Plumps the appearance of fine lines and keeps skin hydrated.'},
+      {t:'Niacinamide',d:'Form of vitamin B3 that minimises pores, brightens skin, reduces redness and strengthens the skin barrier.'},
+      {t:'Retinol',d:'Vitamin A derivative that speeds up cell turnover, reduces fine lines, unclogs pores and improves skin texture. Can cause initial irritation.'},
+      {t:'AHA',d:'Alpha hydroxy acid (glycolic, lactic acid). Water-soluble exfoliant that removes dead skin cells from the surface. Brightens and smooths skin.'},
+      {t:'BHA',d:'Beta hydroxy acid (salicylic acid). Oil-soluble exfoliant that penetrates pores to clear congestion. Ideal for oily and acne-prone skin.'},
+      {t:'SPF',d:'Sun protection factor. Measures how well a product protects against UVB rays. SPF 30 blocks ~97%, SPF 50 blocks ~98%. Essential daily use.'},
+      {t:'Ceramides',d:'Lipids naturally found in skin that maintain the barrier and retain moisture. Depleted by over-cleansing or harsh products.'},
+      {t:'Peptides',d:'Short chains of amino acids that signal the skin to produce more collagen. Used in anti-ageing serums and creams.'},
+      {t:'Antioxidants',d:'Ingredients (vitamin C, vitamin E, niacinamide) that protect skin from free radical damage caused by UV, pollution and stress.'},
+      {t:'Double cleansing',d:'Using an oil-based cleanser first to dissolve makeup and sunscreen, followed by a water-based cleanser to remove remaining impurities.'},
+      {t:'pH balance',d:'Healthy skin has a slightly acidic pH (4.5–5.5). Cleansers and toners that are too alkaline disrupt the skin barrier.'},
+    ]},
+    {cat:'Hair',icon:'💇',terms:[
+      {t:'Porosity',d:'How easily hair absorbs and retains moisture. Low porosity hair repels water; high porosity hair absorbs quickly but loses moisture fast.'},
+      {t:'Heat protectant',d:'Product applied before heat styling to form a barrier against damage from blow-drying, straightening or curling.'},
+      {t:'Leave-in conditioner',d:'Conditioner applied to damp hair and not rinsed out. Provides ongoing moisture, detangling and protection throughout the day.'},
+      {t:'Protein treatment',d:'Deep conditioning treatment that strengthens damaged hair by temporarily filling gaps in the hair shaft with protein.'},
+      {t:'Bond treatment',d:'Rebuilds the disulphide bonds broken by chemical services (bleach, colour, perms). Associated with brands like Olaplex.'},
+      {t:'Toner',d:'Semi-permanent colour applied after bleaching to neutralise brassiness and achieve a desired tone (ash, beige, platinum).'},
+      {t:'Balayage',d:'Hand-painted highlighting technique for a natural, sun-kissed gradient. Grows out softly with no harsh regrowth line.'},
+      {t:'Ombre',d:'Gradual colour fade from dark roots to lighter ends. More defined and uniform than balayage.'},
+      {t:'CGM',d:'Curly Girl Method. A hair care approach avoiding sulphates, silicones and heat to enhance natural curl pattern.'},
+      {t:'Scalp treatment',d:'Targeted product for scalp concerns — dryness, oil, dandruff or hair loss. Applied directly to the scalp, not the lengths.'},
+    ]},
+    {cat:'Fragrance',icon:'🌸',terms:[
+      {t:'Eau de parfum (EDP)',d:'15–20% fragrance concentration. Lasts 4–8 hours. Richer and longer-lasting than EDT.'},
+      {t:'Eau de toilette (EDT)',d:'5–15% fragrance concentration. Lasts 2–4 hours. Lighter and more casual than EDP.'},
+      {t:'Eau de cologne (EDC)',d:'2–4% fragrance concentration. Light and refreshing — traditionally citrus-led. Lasts 1–2 hours.'},
+      {t:'Parfum / Extrait',d:'20–40% concentration. The most intense and longest-lasting form of fragrance. Usually the most expensive.'},
+      {t:'Top notes',d:'The first scents you smell immediately after applying. Usually light and volatile — citrus, herbs, light florals. Fade within 15–30 minutes.'},
+      {t:'Middle notes (heart notes)',d:'Emerge after top notes fade. The core character of the fragrance — florals, spices, fruits. Last 2–4 hours.'},
+      {t:'Base notes',d:'The foundation of the fragrance. Warm, deep and long-lasting — woods, musks, resins, vanilla. Can last all day.'},
+      {t:'Drydown',d:'What a fragrance smells like after it has fully settled on your skin — after the top and middle notes have faded.'},
+      {t:'Sillage',d:'How far a fragrance projects from the skin — the trail it leaves. High sillage means people around you can smell it.'},
+      {t:'Longevity',d:'How long a fragrance lasts on the skin. Affected by concentration, skin type, moisture and body heat.'},
+      {t:'Skin chemistry',d:'Fragrance smells different on different people due to skin pH, body temperature and natural oils.'},
+      {t:'Chypre',d:'Classic fragrance family built on citrus top notes, floral heart and woody/mossy base. Often earthy, sophisticated and timeless.'},
+      {t:'Gourmand',d:'Fragrance family featuring edible, dessert-like notes — vanilla, caramel, chocolate, coffee, sugar.'},
+      {t:'Fougère',d:'Aromatic family built on lavender, oakmoss and coumarin. Often fresh, clean and herby — common in masculine fragrances.'},
+      {t:'Layering',d:'Applying multiple fragrances together to create a unique personal scent. Can layer EDP over body lotion with the same notes.'},
+    ]},
+  ];
+  const allTerms=GLOSSARY.flatMap(g=>g.terms.map(t=>({...t,cat:g.cat,icon:g.icon})));
+  const filtered=sr?allTerms.filter(t=>t.t.toLowerCase().includes(sr)||t.d.toLowerCase().includes(sr)):null;
+  sCH(`<div class="ch"><div class="cht">Glossary</div><div class="chs">${allTerms.length} terms</div></div>`);
+  sFB(`<div class="fb"><div class="fbs"><input type="text" id="glsrch" placeholder="Search terms..." oninput="rGlossary()" value="${(gv('glsrch')||'').replace(/"/g,'&quot;')}"></div></div>`);
+  if(filtered&&!filtered.length){sCt(`<div class="empty"><div class="ei">🔍</div><p>No terms match.</p></div>`);return;}
+  if(filtered){
+    sCt(`<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px">${filtered.map(t=>`<div class="card" style="padding:12px 15px"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px"><span style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">${t.icon} ${t.cat}</span></div><div style="font-size:14px;font-weight:600;margin-bottom:4px">${t.t}</div><div style="font-size:12px;color:var(--text2);line-height:1.6">${t.d}</div></div>`).join('')}</div>`);
+    return;
+  }
+  sCt(`<div style="display:flex;flex-direction:column;gap:18px;padding-bottom:16px">${GLOSSARY.map(cat=>`<div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;padding:0 2px">${cat.icon} ${cat.cat}</div><div style="display:flex;flex-direction:column;gap:5px">${cat.terms.map(t=>`<div class="card" style="padding:11px 14px"><div style="font-size:13px;font-weight:600;margin-bottom:3px">${t.t}</div><div style="font-size:12px;color:var(--text2);line-height:1.6">${t.d}</div></div>`).join('')}</div></div>`).join('')}</div>`);
+}
+
 function rSettings(){
   sCH(`<div class="ch"><div class="cht">Settings</div><div class="chs">Manage your collection</div></div>`);sFB('');
   sCt(`<div class="ss"><div class="st">Categories</div>${cats.map(c=>`<div class="ci"><span style="font-size:19px">${c.icon||'📁'}</span><span style="flex:1;font-size:13px">${c.name}</span><span style="font-size:11px;color:var(--text3);margin-right:8px">${items.filter(i=>i.category===c.id).length} products</span><button class="btn sm" onclick="openEditCat('${c.id}')">Edit</button></div>`).join('')}<div style="padding:9px 15px"><button class="btn sm" onclick="openAddCat()">+ Add category</button></div></div>
